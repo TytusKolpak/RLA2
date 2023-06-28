@@ -13,7 +13,7 @@ const Input = () => {
     return (
         <>
             <h1>Input page</h1>
-            <h6>Input: </h6>
+            Input:
             <form onSubmit={submithandler}>
                 <input type="text" ref={dataRef} />
                 <button type="submit">Save</button>
