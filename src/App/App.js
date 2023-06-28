@@ -1,22 +1,34 @@
-import handleSubmit from '../handles/handlesubmit';
-import { useRef } from 'react';
+import './App.css'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "../pages/Layout";
+import Home from "../pages/Home";
+import Login from "../pages/Login";
+import Signup from "../pages/Signup";
+import Input from "../pages/Input";
+import NoPage from "../pages/NoPage";
+
 
 function App() {
-    const dataRef = useRef()
-
-    const submithandler = (e) => {
-        e.preventDefault()
-        handleSubmit(dataRef.current.value)
-        dataRef.current.value = ""
-    }
-
     return (
         <div className="App">
-            
-            <form onSubmit={submithandler}>
-                <input type="text" ref={dataRef} />
-                <button type="submit">Save</button>
-            </form>
+            <BrowserRouter>
+                <Routes>
+
+                    {/* The "element" attribute corresponds to the import, 
+                    path attribute corresponds to the "to" attribute in "Link" element in Layout.js  */}
+                    <Route path="/" element={<Layout />}>
+
+                        {/* Just "index" instead of path="..." means: when there is no specidied value, such as localhost:3000 */}
+                        <Route index element={<Home />} />
+                        <Route path="login" element={<Login />} />
+                        <Route path="signup" element={<Signup />} />
+                        <Route path="input" element={<Input />} />
+
+                        {/* The path="*" specifies that any uncovered path will lead to this element */}
+                        <Route path="*" element={<NoPage />} />
+                    </Route>
+                </Routes>
+            </BrowserRouter>
         </div>
     );
 }
