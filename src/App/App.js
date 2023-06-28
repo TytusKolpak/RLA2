@@ -1,5 +1,4 @@
-import './App.css';
-import handleSubmit from './handles/handlesubmit';
+import handleSubmit from '../handles/handlesubmit';
 import { useRef } from 'react';
 
 function App() {
