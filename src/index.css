@@ -13,6 +13,22 @@ code {
         monospace;
 }
 
-#root{
+#root {
     height: 100%;
+
+    background-color: #ffffff;
+    /* Light background color */
+    color: #333333;
+    /* Dark font color */
+}
+
+@media (prefers-color-scheme: dark) {
+
+    /* If the user has a dark theme */
+    #root {
+        background-color: #333333;
+        /* Dark background color */
+        color: #ffffff;
+        /* White font color */
+    }
 }
