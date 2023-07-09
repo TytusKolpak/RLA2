@@ -1,7 +1,14 @@
-.App{
+/* Applied to all pages in App (so all either way)*/
+
+.App {
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+}
+
+h1 {
+    position: absolute;
+    top: 50px;
 }

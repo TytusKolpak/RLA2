@@ -1,5 +1,4 @@
 import { Outlet, Link } from "react-router-dom";
-import './Page.css'
 import Container from 'react-bootstrap/Container';
 import Navbar from 'react-bootstrap/Navbar';
 
@@ -7,7 +6,7 @@ import Navbar from 'react-bootstrap/Navbar';
 const Layout = () => {
     return (
         <>
-            {/* The navigation element. The to attribute dicedes where to route to (it is referenced by path attribute in App.js) */}
+            {/* The navigation element. The to attribute decides where to route to (it is referenced by path attribute in App.js) */}
             <Navbar fixed="top" expand="lg" className="bg-body-tertiary">
                 <Container>
                       {/* TODO: I ll have to take care of it in greater detail later. For now it looks to primitive */}

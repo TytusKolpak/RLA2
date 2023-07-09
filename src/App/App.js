@@ -7,7 +7,7 @@ import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Input from "../pages/Input";
 import NoPage from "../pages/NoPage";
-import TKForm from "../pages/Form";
+import TKForm from "../pages/Form/Form";
 
 
 function App() {
@@ -20,7 +20,7 @@ function App() {
                     path attribute corresponds to the "to" attribute in "Link" element in Layout.js  */}
                     <Route path="/" element={<Layout />}>
 
-                        {/* Just "index" instead of path="..." means: when there is no specidied value, such as localhost:3000 */}
+                        {/* Just "index" instead of path="..." means: when there is no specified value, such as localhost:3000 */}
                         <Route index element={<Home />} />
                         <Route path="login" element={<Login />} />
                         <Route path="signup" element={<Signup />} />
