@@ -1,15 +1,10 @@
 {
     "short_name": "RLA2",
-    "name": "Remote Learning Web Application - Project 2",
+    "name": "Remote Learning App 2",
     "icons": [
         {
-            "src": "favicon.ico",
+            "src": "acorn.ico",
             "sizes": "64x64 32x32 24x24 16x16",
             "type": "image/x-icon"
-        }
-    ],
-    "start_url": ".",
-    "display": "standalone",
-    "theme_color": "#000000",
-    "background_color": "#ffffff"
+        }]
 }

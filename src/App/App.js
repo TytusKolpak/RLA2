@@ -1,50 +1,37 @@
 import './App.css'
-import handleSubmit from '../handles/handlesubmit';
-import { useRef } from 'react';
-import {
-    createBrowserRouter,
-    RouterProvider,
-} from "react-router-dom";
-import ErrorPage from "../routes/error_page";
-import Contact from "../routes/contact";
-import Root, { loader as rootLoader } from "../routes/root";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "../pages/Layout";
+import Home from "../pages/Home";
+import Login from "../pages/Login";
+import Signup from "../pages/Signup";
+import Input from "../pages/Input";
+import NoPage from "../pages/NoPage";
+import TKForm from "../pages/Form/Form";
+
 
 function App() {
-    const dataRef = useRef()
-
-    const submithandler = (e) => {
-        e.preventDefault()
-        handleSubmit(dataRef.current.value)
-        dataRef.current.value = ""
-    }
-
-    // Responsible for routing
-    const router = createBrowserRouter([
-        {
-            path: "/",
-            element: <Root />,
-            errorElement: <ErrorPage />,
-            loader: rootLoader,
-            children: [
-                {
-                    path: "contacts/:contactId",
-                    element: <Contact />,
-                },
-            ],
-        },
-    ]);
-
     return (
         <div className="App">
+            <BrowserRouter>
+                <Routes>
 
-            {/* Responsible for routing */}
-            <RouterProvider router={router} />
+                    {/* The "element" attribute corresponds to the import, 
+                    path attribute corresponds to the "to" attribute in "Link" element in Layout.js  */}
+                    <Route path="/" element={<Layout />}>
 
-            <h1>Create an entry to the database:</h1>
-            <form onSubmit={submithandler}>
-                <input type="text" ref={dataRef} />
-                <button type="submit">Save</button>
-            </form>
+                        {/* Just "index" instead of path="..." means: when there is no specified value, such as localhost:3000 */}
+                        <Route index element={<Home />} />
+                        <Route path="login" element={<Login />} />
+                        <Route path="signup" element={<Signup />} />
+                        <Route path="input" element={<Input />} />
+                        <Route path="form" element={<TKForm />} />
+
+                        {/* The path="*" specifies that any uncovered path will lead to this element */}
+                        <Route path="*" element={<NoPage />} />
+                    </Route>
+                </Routes>
+            </BrowserRouter>
         </div>
     );
 }
