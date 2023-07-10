@@ -13,7 +13,7 @@ const Layout = () => {
                     <Link to="/">Home</Link>
                     <Link to="/login">Login</Link>
                     <Link to="/signup">Signup</Link>
-                    <Link to="/input">Input</Link>
+                    <Link to="/crud">Crud</Link>
                     <Link to="/form">Form</Link>
                 </Container>
             </Navbar>

@@ -5,7 +5,7 @@ import Layout from "../pages/Layout";
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
-import Input from "../pages/Input";
+import Crud from "../pages/Crud";
 import NoPage from "../pages/NoPage";
 import TKForm from "../pages/Form/Form";
 
@@ -24,7 +24,7 @@ function App() {
                         <Route index element={<Home />} />
                         <Route path="login" element={<Login />} />
                         <Route path="signup" element={<Signup />} />
-                        <Route path="input" element={<Input />} />
+                        <Route path="crud" element={<Crud />} />
                         <Route path="form" element={<TKForm />} />
 
                         {/* The path="*" specifies that any uncovered path will lead to this element */}
