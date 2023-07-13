@@ -2,39 +2,29 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [greetingVisibility, setGreetingVisibility] = useState(false);
-    const [displayEmail, setDisplayEmail] = useState('')
+    const [currentUser, setCurrentUser] = useState();
 
     const auth = getAuth();
 
-    // Observer on the auth object, works but change it (fires every time i enter anything into a form, so on EVERY change (other variables included))
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // User is signed in, see docs for a list of available properties
-            // https://firebase.google.com/docs/reference/js/auth.user
-            setDisplayEmail(user.email);
-            if (!greetingVisibility) {
-                setGreetingVisibility(true);
-            }
-            // ...
-        } else {
-            // User is signed out
-            // ...
-        }
-    });
+    // set currentUser only on auth change, render once per auth change
+    useEffect(() => {
+        onAuthStateChanged(auth, (user) =>
+            setCurrentUser(user)
+        );
+    }, [auth]);
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
 
         // Perform login logic: create a user record in the database with these fields
-        console.log("email:", email)
-        console.log("password:", password);
+        // console.log("email:", email)
+        // console.log("password:", password);
 
         // Reset form inputs
         setEmail('');
@@ -44,32 +34,27 @@ const Login = () => {
             .then((userCredential) => {
                 // Signed in 
                 console.log("Success, You are signed in.");
-                const user = userCredential.user;
-                console.log("user", user);
-                // ...
+                console.log("userCredential", userCredential);
             })
             .catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                console.log("errorCode", errorCode);
-                console.log("errorMessage", errorMessage);
-                // ..
+                // Failed to signed in 
+                console.log("errorCode", error.code);
+                console.log("errorMessage", error.message);
             });
     }
 
 
     function mySignOut() {
-        console.log("auth", auth);
-        signOut(auth).then(() => {
-            console.log("Sign-out successful.");
-            if (greetingVisibility) {
-                setGreetingVisibility(false);
-                console.log("greetingVisibility:", greetingVisibility);
-            }
-        }).catch((error) => {
-            console.log("An error happened:", error);
-        });
+        // signOut is a promise already, so you can use .then and .catch immediately 
+        signOut(auth)
+            .then(() => {
+                console.log("Sign-out successful.");
+            })
+            .catch((error) => {
+                console.log("An error happened:", error);
+            });
     }
+
 
     return (<>
         <h1>Login page</h1>
@@ -94,15 +79,15 @@ const Login = () => {
                 />
             </Form.Group>
 
-            <Button variant='primary' type="submit">
-                Log in
-            </Button>
-        </Form>
-        <Button variant='secondary' onClick={mySignOut}>
-            Log out
-        </Button>
+            {
+                currentUser
+                    ?
+                    <Button variant='secondary' onClick={mySignOut}>Log out</Button>
+                    :
+                    <Button variant='primary' type="submit">Log in</Button>
+            }
 
-        {greetingVisibility ? <p>HI {displayEmail}</p> : null}
+        </Form>
 
     </>);
 };

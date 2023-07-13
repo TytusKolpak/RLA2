@@ -7,7 +7,7 @@ import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import Crud from "../pages/Crud";
 import NoPage from "../pages/NoPage";
-import TKForm from "../pages/Form/Form";
+import ChatRoom from "../pages/ChatRoom/ChatRoom";
 
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
                         <Route path="login" element={<Login />} />
                         <Route path="signup" element={<Signup />} />
                         <Route path="crud" element={<Crud />} />
-                        <Route path="form" element={<TKForm />} />
+                        <Route path="chatRoom" element={<ChatRoom />} />
 
                         {/* The path="*" specifies that any uncovered path will lead to this element */}
                         <Route path="*" element={<NoPage />} />

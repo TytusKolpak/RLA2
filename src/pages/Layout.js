@@ -9,12 +9,11 @@ const Layout = () => {
             {/* The navigation element. The to attribute decides where to route to (it is referenced by path attribute in App.js) */}
             <Navbar fixed="top" expand="lg" className="bg-body-tertiary">
                 <Container>
-                      {/* TODO: I ll have to take care of it in greater detail later. For now it looks to primitive */}
                     <Link to="/">Home</Link>
                     <Link to="/login">Login</Link>
                     <Link to="/signup">Signup</Link>
                     <Link to="/crud">Crud</Link>
-                    <Link to="/form">Form</Link>
+                    <Link to="/chatRoom">ChatRoom</Link>
                 </Container>
             </Navbar>
 
