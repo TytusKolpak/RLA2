@@ -4,6 +4,17 @@ import Form from 'react-bootstrap/Form';
 
 import { useState, useEffect } from 'react';
 
+export function useUserAuth() {
+    const auth = getAuth();
+    const [currentUser, setCurrentUser] = useState();
+    useEffect(() => {
+        const unSubscribe = onAuthStateChanged(auth, (user) =>
+            setCurrentUser(user)
+        );
+        return unSubscribe;
+    }, [auth]);
+    return currentUser;
+}
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -82,7 +93,10 @@ const Login = () => {
             {
                 currentUser
                     ?
-                    <Button variant='secondary' onClick={mySignOut}>Log out</Button>
+                    <>
+                        <Button variant='secondary' onClick={mySignOut}>Log out</Button>
+                        <p>Hi {email}</p>
+                    </>
                     :
                     <Button variant='primary' type="submit">Log in</Button>
             }

@@ -4,3 +4,7 @@
     flex-direction: column;
     justify-content: space-around;
 }
+
+.input-group{
+    width: 400px;
+}
