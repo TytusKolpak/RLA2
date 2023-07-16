@@ -1,10 +1,12 @@
-// Display character
+// Display styling
 import './ChatRoom.css';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import ToggleButton from 'react-bootstrap/ToggleButton';
 
 // React variable handling
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
@@ -13,18 +15,20 @@ import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
 // Get user state from different file
 import { useUserAuth } from '../Login';
 
+var initialized = false
+
 function ChatRoom() {
     const [messages, setMessages] = useState([]);
     const [inputtedMessage, setInputtedMessage] = useState('');
     const pulledUser = useUserAuth();
 
-    // Init
-    useEffect(() => {
+    // It's sure to fire only once
+    if (!initialized) {
         seeUsers();
-    }, []);
-
+        getUserContacts();
+        initialized = true;
+    }
     async function seeUsers() {
-        console.log('Click');
         const newMessages = [];
 
         const messagesRef = collection(firestore, "Message")
@@ -47,17 +51,16 @@ function ChatRoom() {
 
     async function createMessageDoc() {
         try {
-            const collection = "testMessages";
+            const collectionName = "testMessages";
             const document = {
                 messageText: inputtedMessage,
                 sender: pulledUser.email
             }
 
-            console.log(collection, document);
             // This is the core of creating a record
             // addDoc(collection(database, "collectionName"),{documentContents})
             // if collection of collectionName doesn't exist, it will be created
-            const docRef = await addDoc(collection(firestore, collection), document);
+            const docRef = await addDoc(collection(firestore, collectionName), document);
 
             if (docRef) {
                 console.log("Added document of id:", docRef.id);
@@ -67,34 +70,71 @@ function ChatRoom() {
         }
     }
 
+    // For displaying the elements on the left as radio buttons
+    // const [checked, setChecked] = useState(false);
+    const [radioValue, setRadioValue] = useState('1');
+    const [allContacts, setAllContacts] = useState([]);
+
+    async function getUserContacts() {
+        const collectionName = "Contacts"
+        const querySnapshot = await getDocs(collection(firestore, collectionName));
+
+        querySnapshot.forEach((doc) => {
+            setAllContacts(doc.data().contacts);
+            console.log(allContacts);
+        });
+        
+    }
+
     return (
-        <>
-            <h1>ChatRoom {pulledUser ?  pulledUser.email : null}</h1>
+        <div className='chatRoom'>
+            <div id='leftPanel'>
 
-            <ul>
-                {messages.map((message) => (
-                    <li key={message.ID}>{message.text}</li>
-                ))}
-            </ul>
+                <ButtonGroup vertical="true">
+                    {allContacts && allContacts.map((radio, idx) => (
+                        <ToggleButton
+                            key={idx}
+                            id={`radio-${idx}`}
+                            type="radio"
+                            name="radio"
+                            value={radio.value}
+                            checked={radioValue === radio.value}
+                            onChange={(e) => setRadioValue(e.currentTarget.value)}
+                        >
+                            {radio.name}
+                        </ToggleButton>
+                    ))}
+                </ButtonGroup>
+            </div>
+            <div id='middlePanel'>
+                <h1>ChatRoom {pulledUser ? "of " + pulledUser.email : null}</h1>
 
-            <Form onSubmit={handleFormSubmit}>
-                <Form.Group className="mb-3" >
-                    <Form.Label >Message</Form.Label>
-                    <Form.Control
-                        value={inputtedMessage}
-                        onChange={e => setInputtedMessage(e.target.value)}
-                    />
-                </Form.Group>
+                <ul>
+                    {messages.map((message) => (
+                        <li key={message.ID}>{message.text}</li>
+                    ))}
+                </ul>
 
-                {pulledUser ?
-                    <Button variant='primary' type="submit">Send</Button>
-                    :
-                    <>
-                        <Button variant='primary' type="submit" disabled>Send</Button>
-                        <p>Nobody is logged in.</p>
-                    </>}
-            </Form>
-        </>
+                <Form onSubmit={handleFormSubmit}>
+                    <Form.Group className="mb-3" >
+                        <Form.Label >Message</Form.Label>
+                        <Form.Control
+                            value={inputtedMessage}
+                            onChange={e => setInputtedMessage(e.target.value)}
+                        />
+                    </Form.Group>
+
+                    {pulledUser ?
+                        <Button variant='primary' type="submit">Send</Button>
+                        :
+                        <>
+                            <Button variant='primary' type="submit" disabled>Send</Button>
+                            <p>Nobody is logged in.</p>
+                        </>}
+                </Form>
+            </div>
+            <div id='rightPanel'>Right</div>
+        </div>
     );
 }
 

@@ -1,14 +1,8 @@
 /* Applied to all pages in App (so all either way)*/
-
+/* Account for the navbar, otherwise fill all the screen */
 .App {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-h1 {
+    width: 100%;
+    height: calc(100% - 40px);
     position: absolute;
-    top: 50px;
+    top: 40px;
 }
