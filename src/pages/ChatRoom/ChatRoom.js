@@ -16,8 +16,7 @@ import { useUserAuth } from '../Login';
 function ChatRoom() {
     const [messages, setMessages] = useState([]);
     const [inputtedMessage, setInputtedMessage] = useState('');
-    const pullUser = useUserAuth();
-    const [user] = useState(pullUser)
+    const pulledUser = useUserAuth();
 
     // Init
     useEffect(() => {
@@ -51,7 +50,7 @@ function ChatRoom() {
             const collection = "testMessages";
             const document = {
                 messageText: inputtedMessage,
-                sender: user.email
+                sender: pulledUser.email
             }
 
             console.log(collection, document);
@@ -70,7 +69,7 @@ function ChatRoom() {
 
     return (
         <>
-            <h1>ChatRoom {user ?  user.email : null}</h1>
+            <h1>ChatRoom {pulledUser ?  pulledUser.email : null}</h1>
 
             <ul>
                 {messages.map((message) => (
@@ -87,7 +86,7 @@ function ChatRoom() {
                     />
                 </Form.Group>
 
-                {user ?
+                {pulledUser ?
                     <Button variant='primary' type="submit">Send</Button>
                     :
                     <>
