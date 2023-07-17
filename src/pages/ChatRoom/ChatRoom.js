@@ -6,7 +6,7 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import ToggleButton from 'react-bootstrap/ToggleButton';
 
 // React variable handling
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
@@ -18,35 +18,46 @@ import { useCurrentUser } from '../Login';
 var initialized = false
 
 function ChatRoom() {
-    const [messages, setMessages] = useState([]);
     const [inputtedMessage, setInputtedMessage] = useState('');
     const pulledUser = useCurrentUser('');
 
     // It's sure to fire only once
     if (!initialized) {
-        seeUsers();
         getUserContacts();
         initialized = true;
     }
-    async function seeUsers() {
-        const newMessages = [];
 
-        const messagesRef = collection(firestore, "Message")
-        const q = query(messagesRef, where("owner", "==", "You"))
+    // Hook used in below very function
+    const [messagesToDisplay, setMessagesToDisplay] = useState([])
+
+    // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
+    async function logMessages() {
+        // console.log("Your messages:");
+
+        // Create a reference to the cities collection
+        const collectionName = "testMessages";
+        const collectionRef = collection(firestore, collectionName);
+
+        // Create a query against the collection.
+        const fieldToQuery = "sender";
+        const searchedValue = "test@test.test"
+        const q = query(collectionRef, where(fieldToQuery, "==", searchedValue));
+
+        // Retrieve the results
         const querySnapshot = await getDocs(q);
-
         querySnapshot.forEach((doc) => {
-            const text = doc.data().text;
-            const ID = doc.data().id;
-            newMessages.push({ ID: ID, text: text });
+            // doc.data() is never undefined for query doc snapshots
+            const thisMessage = doc.data().messageText;
+            if (thisMessage) {
+                // console.log(thisMessage);
+                setMessagesToDisplay((messagesToDisplay) => [...messagesToDisplay, thisMessage])
+            }
         });
-        setMessages(newMessages);
     }
 
     function handleFormSubmit(e) {
         e.preventDefault();
         createMessageDoc();
-        console.log(inputtedMessage)
     }
 
     async function createMessageDoc() {
@@ -54,7 +65,8 @@ function ChatRoom() {
             const collectionName = "testMessages";
             const document = {
                 messageText: inputtedMessage,
-                sender: pulledUser.email
+                sender: pulledUser.email, // this might need to change
+                recipient: recipientEmail
             }
 
             // This is the core of creating a record
@@ -64,16 +76,17 @@ function ChatRoom() {
 
             if (docRef) {
                 console.log("Added document of id:", docRef.id);
+                console.log(pulledUser.email, "sent a message to:", recipientEmail, "saying \"" + inputtedMessage + "\"");
             }
         } catch (e) {
             console.error("Error adding document: ", e);
         }
     }
 
-    // For displaying the elements on the left as radio buttons
-    // const [checked, setChecked] = useState(false);
-    const [radioValue, setRadioValue] = useState('1');
     const [allContacts, setAllContacts] = useState([]);
+    const [radioValue, setRadioValue] = useState('0');
+    const [radios, setRadios] = useState([]);
+    const [recipientEmail, setRecipientEmail] = useState('')
 
     async function getUserContacts() {
         const collectionName = "Contacts"
@@ -81,39 +94,51 @@ function ChatRoom() {
 
         querySnapshot.forEach((doc) => {
             setAllContacts(doc.data().contacts);
-            console.log(allContacts);
         });
-        
+
+        setRadios(allContacts.map((contact, index) => ({
+            name: contact,
+            value: String(index),
+        })));
     }
+
+    function changedContact(e) {
+        setRadioValue(e.currentTarget.value)
+        // console.log(e.currentTarget.value);
+        // console.log(radios[e.currentTarget.value].name);
+        setRecipientEmail(radios[e.currentTarget.value].name)
+    }
+
+    // Listen for change of radios value and when it's changed call getUserContacts()
+    useEffect(() => {
+        getUserContacts()
+    })
 
     return (
         <div className='chatRoom'>
-            <div id='leftPanel'>
-
-                <ButtonGroup vertical="true">
-                    {allContacts && allContacts.map((radio, idx) => (
-                        <ToggleButton
-                            key={idx}
-                            id={`radio-${idx}`}
-                            type="radio"
-                            name="radio"
-                            value={radio.value}
-                            checked={radioValue === radio.value}
-                            onChange={(e) => setRadioValue(e.currentTarget.value)}
-                        >
-                            {radio.name}
-                        </ToggleButton>
-                    ))}
-                </ButtonGroup>
+            <div id='leftPanel' className='panel'>
+                <h2>Contacts</h2>
+                <div id='contacts'>
+                    <ButtonGroup vertical='true'>
+                        {radios && radios.map((radio, idx) => (
+                            <ToggleButton
+                                key={idx}
+                                id={`radio-${idx}`}
+                                type="radio"
+                                name="set1"
+                                variant={radioValue === radio.value ? 'primary' : 'outline-primary'}
+                                value={radio.value}
+                                checked={radioValue === radio.value}
+                                onChange={(e) => changedContact(e)}
+                            >
+                                {radio.name}
+                            </ToggleButton>
+                        ))}
+                    </ButtonGroup>
+                </div>
             </div>
-            <div id='middlePanel'>
+            <div id='middlePanel' className='panel'>
                 <h1>ChatRoom {pulledUser ? "of " + pulledUser.email : null}</h1>
-
-                <ul>
-                    {messages.map((message) => (
-                        <li key={message.ID}>{message.text}</li>
-                    ))}
-                </ul>
 
                 <Form onSubmit={handleFormSubmit}>
                     <Form.Group className="mb-3" >
@@ -133,7 +158,13 @@ function ChatRoom() {
                         </>}
                 </Form>
             </div>
-            <div id='rightPanel'>Right</div>
+            <div id='rightPanel' className='panel'>
+                <Button onClick={logMessages}>Log messages</Button>
+                <br/>
+                {messagesToDisplay.map((message, index)=>(
+                    <p key={index}>{message}</p>
+                ))}
+            </div>
         </div>
     );
 }

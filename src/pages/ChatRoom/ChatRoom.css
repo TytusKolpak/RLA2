@@ -1,9 +1,26 @@
 .chatRoom {
     height: 100%;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
 }
 
-.input-group{
+.input-group {
     width: 400px;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+}
+
+#rightPanel {
+    align-items: normal;
+}
+
+#rightPanel p {
+    border: solid 1px blue;
+    border-radius: 3px;
+
 }
