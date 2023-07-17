@@ -13,14 +13,14 @@ import { firestore } from '../../firebase_setup/firebase';
 import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
 
 // Get user state from different file
-import { useUserAuth } from '../Login';
+import { useCurrentUser } from '../Login';
 
 var initialized = false
 
 function ChatRoom() {
     const [messages, setMessages] = useState([]);
     const [inputtedMessage, setInputtedMessage] = useState('');
-    const pulledUser = useUserAuth();
+    const pulledUser = useCurrentUser('');
 
     // It's sure to fire only once
     if (!initialized) {

@@ -3,10 +3,11 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 
-export function useUserAuth() {
+export function useCurrentUser() {
     const auth = getAuth();
-    const [currentUser, setCurrentUser] = useState();
+    const [currentUser, setCurrentUser] = useState('');
     useEffect(() => {
         const unSubscribe = onAuthStateChanged(auth, (user) =>
             setCurrentUser(user)
@@ -20,6 +21,7 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [currentUser, setCurrentUser] = useState();
+    const navigate = useNavigate();
 
     const auth = getAuth();
 
@@ -45,7 +47,8 @@ const Login = () => {
             .then((userCredential) => {
                 // Signed in 
                 console.log("Success, You are signed in.");
-                console.log("userCredential", userCredential);
+                console.log("user:", userCredential.user.email);
+                navigate('/chatRoom');
             })
             .catch((error) => {
                 // Failed to signed in 
