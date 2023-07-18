@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
 
 // Get user state from different file
 import { useCurrentUser } from '../Login';
@@ -58,6 +58,7 @@ function ChatRoom() {
     function handleFormSubmit(e) {
         e.preventDefault();
         createMessageDoc();
+        // Probably display that it was in fact sent
     }
 
     async function createMessageDoc() {
@@ -66,7 +67,8 @@ function ChatRoom() {
             const document = {
                 messageText: inputtedMessage,
                 sender: pulledUser.email, // this might need to change
-                recipient: recipientEmail
+                recipient: recipientEmail,
+                timestamp: serverTimestamp()
             }
 
             // This is the core of creating a record
@@ -74,6 +76,7 @@ function ChatRoom() {
             // if collection of collectionName doesn't exist, it will be created
             const docRef = await addDoc(collection(firestore, collectionName), document);
 
+            // Display a message if the creation of a message was successful
             if (docRef) {
                 console.log("Added document of id:", docRef.id);
                 console.log(pulledUser.email, "sent a message to:", recipientEmail, "saying \"" + inputtedMessage + "\"");
@@ -83,11 +86,13 @@ function ChatRoom() {
         }
     }
 
+    const chosenRadioButton = '0';
     const [allContacts, setAllContacts] = useState([]);
-    const [radioValue, setRadioValue] = useState('0');
+    const [radioValue, setRadioValue] = useState(chosenRadioButton);
     const [radios, setRadios] = useState([]);
     const [recipientEmail, setRecipientEmail] = useState('')
 
+    // Called on startup
     async function getUserContacts() {
         const collectionName = "Contacts"
         const querySnapshot = await getDocs(collection(firestore, collectionName));
@@ -96,10 +101,16 @@ function ChatRoom() {
             setAllContacts(doc.data().contacts);
         });
 
+        // Set names and values(0,1,2,...) of the radio buttons used to display possible message recipients
         setRadios(allContacts.map((contact, index) => ({
             name: contact,
             value: String(index),
         })));
+
+        // Now that we have radios the setRecipientEmail should be used to set recipient to this corresponding to chosen radioValue
+        // console.log(allContacts[chosenRadioButton]);
+        setRecipientEmail(allContacts[chosenRadioButton])
+        console.count();
     }
 
     function changedContact(e) {
@@ -112,7 +123,7 @@ function ChatRoom() {
     // Listen for change of radios value and when it's changed call getUserContacts()
     useEffect(() => {
         getUserContacts()
-    })
+    },[getUserContacts])
 
     return (
         <div className='chatRoom'>
@@ -120,13 +131,15 @@ function ChatRoom() {
                 <h2>Contacts</h2>
                 <div id='contacts'>
                     <ButtonGroup vertical='true'>
+
+                        {/* If radios exist then map them to a set of radio buttons */}
                         {radios && radios.map((radio, idx) => (
                             <ToggleButton
                                 key={idx}
                                 id={`radio-${idx}`}
                                 type="radio"
                                 name="set1"
-                                variant={radioValue === radio.value ? 'primary' : 'outline-primary'}
+                                variant={radioValue === radio.value ? 'primary' : 'secondary'}
                                 value={radio.value}
                                 checked={radioValue === radio.value}
                                 onChange={(e) => changedContact(e)}
@@ -160,8 +173,8 @@ function ChatRoom() {
             </div>
             <div id='rightPanel' className='panel'>
                 <Button onClick={logMessages}>Log messages</Button>
-                <br/>
-                {messagesToDisplay.map((message, index)=>(
+                <br />
+                {messagesToDisplay.map((message, index) => (
                     <p key={index}>{message}</p>
                 ))}
             </div>
