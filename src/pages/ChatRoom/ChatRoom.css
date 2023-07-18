@@ -17,10 +17,14 @@
 
 #rightPanel {
     align-items: normal;
-}
 
-#rightPanel p {
-    border: solid 1px blue;
-    border-radius: 3px;
+    sentMessages p {
+        border: solid 1px blue;
+        border-radius: 3px;
+    }
 
+    receivedMessages p {
+        border: solid 1px red;
+        border-radius: 3px;
+    }
 }

@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
 
 // Get user state from different file
 import { useCurrentUser } from '../Login';
@@ -20,7 +20,8 @@ function ChatRoom() {
     const pulledUser = useCurrentUser('');
 
     // Hook used in below very function
-    const [messagesToDisplay, setMessagesToDisplay] = useState([])
+    const [sentMessagesToDisplay, setSentMessagesToDisplay] = useState([]);
+    const [receivedMessagesToDisplay, setReceivedMessagesToDisplay] = useState([]);
 
     // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
     async function logMessages() {
@@ -31,23 +32,67 @@ function ChatRoom() {
         const collectionRef = collection(firestore, collectionName);
 
         // Create a query against the collection.
-        const fieldToQuery = "sender";
         const searchedValue = pulledUser.email;
 
         // Unless the pulledUser has been loaded there is no field to be searched by
         if (searchedValue) {
-            const q = query(collectionRef, where(fieldToQuery, "==", searchedValue));
+
+            // Find all messages sent by this user
+            var fieldToQuery = "sender";
+            var q = query(collectionRef, where(fieldToQuery, "==", searchedValue), orderBy("timestamp"));
 
             // Retrieve the results
-            const querySnapshot = await getDocs(q);
+            var querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
                 // doc.data() is never undefined for query doc snapshots
-                const thisMessage = doc.data().messageText;
+                console.log(doc.data());
+
+                // Convert the Firestore timestamp to a JavaScript Date object
+                const date = doc.data().timestamp.toDate();
+
+                // Get the month and day from the date
+
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // + 1 so that January won't be 0 but 1 instead, and then 01 instead of 1
+                const day = date.getDate();
+                const hour = date.getHours();
+                const minute = date.getMinutes();
+
+                const thisMessage = doc.data().messageText + " " + hour + ":" + minute + " " + day + "." + month;
                 if (thisMessage) {
                     // console.log(thisMessage);
-                    setMessagesToDisplay((messagesToDisplay) => [...messagesToDisplay, thisMessage])
+                    setSentMessagesToDisplay((sentMessagesToDisplay) => [...sentMessagesToDisplay, thisMessage])
                 }
             });
+
+            // Find all messages received by this user
+            fieldToQuery = "recipient";
+            q = query(collectionRef, where(fieldToQuery, "==", searchedValue), orderBy("timestamp"));
+
+            // Retrieve the results
+            querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                // doc.data() is never undefined for query doc snapshots
+                console.log(doc.data());
+
+                // Convert the Firestore timestamp to a JavaScript Date object
+                const date = doc.data().timestamp.toDate();
+
+                // Get the month and day from the date
+
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // + 1 so that January won't be 0 but 1 instead
+                const day = date.getDate();
+                const hour = date.getHours();
+                const minute = date.getMinutes();
+
+                const thisMessage = doc.data().messageText + " " + hour + ":" + minute + " " + day + "." + month;
+
+                if (thisMessage) {
+                    // console.log(thisMessage);
+                    setReceivedMessagesToDisplay((receivedMessagesToDisplay) => [...receivedMessagesToDisplay, thisMessage])
+                }
+            });
+
+
         }
     }
 
@@ -182,10 +227,17 @@ function ChatRoom() {
             </div>
             <div id='rightPanel' className='panel'>
                 <h2>Sent messages</h2>
-                <br />
-                {messagesToDisplay.map((message, index) => (
-                    <p key={index}>{message}</p>
-                ))}
+                <div className='sentMessages'>
+                    {sentMessagesToDisplay.map((message, index) => (
+                        <p key={index}>{message}</p>
+                    ))}
+                </div>
+                <h2>Received messages</h2>
+                <div className='receivedMessages'>
+                    {receivedMessagesToDisplay.map((message, index) => (
+                        <p key={index}>{message}</p>
+                    ))}
+                </div>
             </div>
         </div>
     );
