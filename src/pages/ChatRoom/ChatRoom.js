@@ -15,17 +15,9 @@ import { collection, getDocs, addDoc, query, where, serverTimestamp } from 'fire
 // Get user state from different file
 import { useCurrentUser } from '../Login';
 
-var initialized = false
-
 function ChatRoom() {
     const [inputtedMessage, setInputtedMessage] = useState('');
     const pulledUser = useCurrentUser('');
-
-    // It's sure to fire only once
-    if (!initialized) {
-        getUserContacts();
-        initialized = true;
-    }
 
     // Hook used in below very function
     const [messagesToDisplay, setMessagesToDisplay] = useState([])
@@ -40,19 +32,23 @@ function ChatRoom() {
 
         // Create a query against the collection.
         const fieldToQuery = "sender";
-        const searchedValue = "test@test.test"
-        const q = query(collectionRef, where(fieldToQuery, "==", searchedValue));
+        const searchedValue = pulledUser.email;
 
-        // Retrieve the results
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-            // doc.data() is never undefined for query doc snapshots
-            const thisMessage = doc.data().messageText;
-            if (thisMessage) {
-                // console.log(thisMessage);
-                setMessagesToDisplay((messagesToDisplay) => [...messagesToDisplay, thisMessage])
-            }
-        });
+        // Unless the pulledUser has been loaded there is no field to be searched by
+        if (searchedValue) {
+            const q = query(collectionRef, where(fieldToQuery, "==", searchedValue));
+
+            // Retrieve the results
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                // doc.data() is never undefined for query doc snapshots
+                const thisMessage = doc.data().messageText;
+                if (thisMessage) {
+                    // console.log(thisMessage);
+                    setMessagesToDisplay((messagesToDisplay) => [...messagesToDisplay, thisMessage])
+                }
+            });
+        }
     }
 
     function handleFormSubmit(e) {
@@ -123,10 +119,14 @@ function ChatRoom() {
     // Listen for change of radios value and when it's changed call getUserContacts()
     useEffect(() => {
         getUserContacts();
-        
+
         // This next line is not healthy, but all works ok so far and i want clear console. I am sure to come back here eventually.
         // eslint-disable-next-line
     }, [recipientEmail])
+
+    useEffect(() => {
+        logMessages();
+    }, [pulledUser])
 
     return (
         <div className='chatRoom'>
