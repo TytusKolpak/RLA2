@@ -123,7 +123,7 @@ function ChatRoom() {
     // Listen for change of radios value and when it's changed call getUserContacts()
     useEffect(() => {
         getUserContacts()
-    },[getUserContacts])
+    },[recipientEmail])
 
     return (
         <div className='chatRoom'>
