@@ -51,9 +51,12 @@ function ChatRoom() {
         }
     }
 
+    // What happens when user clicks Send button
+    const [numberOfMessagesSent, setNumberOfMessagesSent] = useState(0)
     function handleFormSubmit(e) {
         e.preventDefault();
         createMessageDoc();
+        setNumberOfMessagesSent(numberOfMessagesSent + 1);
         // Probably display that it was in fact sent
     }
 
@@ -126,7 +129,10 @@ function ChatRoom() {
 
     useEffect(() => {
         logMessages();
-    }, [pulledUser])
+
+        // Same os elsewhere. IK it's wrong but it's a quick fix for now
+        // eslint-disable-next-line
+    }, [pulledUser, numberOfMessagesSent])
 
     return (
         <div className='chatRoom'>
@@ -175,7 +181,7 @@ function ChatRoom() {
                 </Form>
             </div>
             <div id='rightPanel' className='panel'>
-                <Button onClick={logMessages}>Log messages</Button>
+                <h2>Sent messages</h2>
                 <br />
                 {messagesToDisplay.map((message, index) => (
                     <p key={index}>{message}</p>
