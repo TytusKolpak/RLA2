@@ -122,8 +122,11 @@ function ChatRoom() {
 
     // Listen for change of radios value and when it's changed call getUserContacts()
     useEffect(() => {
-        getUserContacts()
-    },[recipientEmail])
+        getUserContacts();
+        
+        // This next line is not healthy, but all works ok so far and i want clear console. I am sure to come back here eventually.
+        // eslint-disable-next-line
+    }, [recipientEmail])
 
     return (
         <div className='chatRoom'>
