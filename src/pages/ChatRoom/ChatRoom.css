@@ -15,16 +15,43 @@
     margin: 10px;
 }
 
+#middlePanel {
+    #messageInput {
+        width: 100%;
+        margin-top: 10px;
+        margin-bottom: 30px;
+    }
+
+    .message-container {
+        width: 100%;
+        flex-grow: 1;
+        overflow-y: scroll;
+        /* Enable vertical scrolling */
+    }
+
+    .messages {
+        /* Add some padding to the bottom to ensure the last message is not hidden behind the scroll bar */
+        padding-bottom: 10px;
+    }
+
+    .message {
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+    }
+}
+
+
 #rightPanel {
     align-items: normal;
 
-    sentMessages p {
+
+    .sentMessages p {
         border: solid 1px blue;
         border-radius: 3px;
     }
 
-    receivedMessages p {
-        border: solid 1px red;
+    .receivedMessages p {
+        border: solid 1px green;
         border-radius: 3px;
     }
 }

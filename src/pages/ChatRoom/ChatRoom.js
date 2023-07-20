@@ -206,8 +206,51 @@ function ChatRoom() {
             </div>
             <div id='middlePanel' className='panel'>
                 <h1>ChatRoom {pulledUser ? "of " + pulledUser.email : null}</h1>
+                <div class="message-container">
+                    <div class="messages">
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                        <div class="message">Message 1</div>
+                        <div class="message">Message 2</div>
+                    </div>
+                </div>
 
-                <Form onSubmit={handleFormSubmit}>
+
+                <Form id='messageInput' onSubmit={handleFormSubmit}>
                     <Form.Group className="mb-3" >
                         <Form.Label >Message</Form.Label>
                         <Form.Control
