@@ -29,14 +29,14 @@
         /* Enable vertical scrolling */
     }
 
-    .messages {
-        /* Add some padding to the bottom to ensure the last message is not hidden behind the scroll bar */
-        padding-bottom: 10px;
+    .sentMessages p {
+        border: solid 1px blue;
+        border-radius: 3px;
     }
 
-    .message {
-        padding: 10px;
-        border-bottom: 1px solid #ccc;
+    .receivedMessages p {
+        border: solid 1px green;
+        border-radius: 3px;
     }
 }
 

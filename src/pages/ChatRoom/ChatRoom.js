@@ -136,25 +136,39 @@ function ChatRoom() {
     const [radios, setRadios] = useState([]);
     const [recipientEmail, setRecipientEmail] = useState('')
 
-    // Called on startup
+    // Called on startup. Used to populate the left panel with possible message recipients (bound to currently logged user)
     async function getUserContacts() {
+        console.log("Getting user contacts.");
         const collectionName = "Contacts"
-        const querySnapshot = await getDocs(collection(firestore, collectionName));
+        const collectionRef = collection(firestore, collectionName);
+        // Create a query against the collection.
+        const searchedValue = pulledUser.email;
 
-        querySnapshot.forEach((doc) => {
-            setAllContacts(doc.data().contacts);
-        });
+        // If we have a user email to base our search on
+        if (searchedValue) {
+            const fieldToQuery = "ownerAddress";
+            const q = query(collectionRef, where(fieldToQuery, "==", searchedValue));
 
-        // Set names and values(0,1,2,...) of the radio buttons used to display possible message recipients
-        setRadios(allContacts.map((contact, index) => ({
-            name: contact,
-            value: String(index),
-        })));
+            const querySnapshot = await getDocs(q);
 
-        // Now that we have radios the setRecipientEmail should be used to set recipient to this corresponding to chosen radioValue
-        // console.log(allContacts[chosenRadioButton]);
-        setRecipientEmail(allContacts[chosenRadioButton])
-        console.count();
+            // For now we expect 1 array (contacts is an array with emails), but later it might change
+            querySnapshot.forEach((doc) => {
+                setAllContacts(doc.data().contacts);
+                console.log(doc.data().contacts);
+            });
+
+            // Set names and values(0,1,2,...) of the radio buttons used to display possible message recipients
+            console.log("Setting radios.");
+            setRadios(allContacts.map((contact, index) => ({
+                name: contact,
+                value: String(index),
+            })));
+
+            // Now that we have radios, the setRecipientEmail should be used to set recipient to its corresponding radioValue
+            // console.log(allContacts[chosenRadioButton]);
+            setRecipientEmail(allContacts[chosenRadioButton])
+            console.count();
+        }
     }
 
     function changedContact(e) {
@@ -168,9 +182,9 @@ function ChatRoom() {
     useEffect(() => {
         getUserContacts();
 
-        // This next line is not healthy, but all works ok so far and i want clear console. I am sure to come back here eventually.
+        // This next line is not healthy, but all works ok so far and i want clear console. I am sure to come back here eventually. The "" is for it to fire once more on startup
         // eslint-disable-next-line
-    }, [recipientEmail])
+    }, [recipientEmail, ""])
 
     useEffect(() => {
         logMessages();
@@ -206,46 +220,20 @@ function ChatRoom() {
             </div>
             <div id='middlePanel' className='panel'>
                 <h1>ChatRoom {pulledUser ? "of " + pulledUser.email : null}</h1>
-                <div class="message-container">
-                    <div class="messages">
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
-                        <div class="message">Message 1</div>
-                        <div class="message">Message 2</div>
+                <div className="message-container">
+                    <div className="messages">
+                        <h2>Sent messages</h2>
+                        <div className='sentMessages'>
+                            {sentMessagesToDisplay.map((message, index) => (
+                                <p key={index}>{message}</p>
+                            ))}
+                        </div>
+                        <h2>Received messages</h2>
+                        <div className='receivedMessages'>
+                            {receivedMessagesToDisplay.map((message, index) => (
+                                <p key={index}>{message}</p>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -269,18 +257,8 @@ function ChatRoom() {
                 </Form>
             </div>
             <div id='rightPanel' className='panel'>
-                <h2>Sent messages</h2>
-                <div className='sentMessages'>
-                    {sentMessagesToDisplay.map((message, index) => (
-                        <p key={index}>{message}</p>
-                    ))}
-                </div>
-                <h2>Received messages</h2>
-                <div className='receivedMessages'>
-                    {receivedMessagesToDisplay.map((message, index) => (
-                        <p key={index}>{message}</p>
-                    ))}
-                </div>
+                <h1>Other</h1>
+
             </div>
         </div>
     );
