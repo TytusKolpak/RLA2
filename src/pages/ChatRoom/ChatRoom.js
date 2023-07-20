@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
-import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy, or } from 'firebase/firestore';
 
 // Get user state from different file
 import { useCurrentUser } from '../Login';
@@ -20,8 +20,7 @@ function ChatRoom() {
     const pulledUser = useCurrentUser('');
 
     // Hook used in below very function
-    const [sentMessagesToDisplay, setSentMessagesToDisplay] = useState([]);
-    const [receivedMessagesToDisplay, setReceivedMessagesToDisplay] = useState([]);
+    const [allMessagesToDisplay, setAllMessagesToDisplay] = useState([]);
 
     // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
     async function logMessages() {
@@ -37,62 +36,39 @@ function ChatRoom() {
         // Unless the pulledUser has been loaded there is no field to be searched by
         if (searchedValue) {
 
-            // Find all messages sent by this user
-            var fieldToQuery = "sender";
-            var q = query(collectionRef, where(fieldToQuery, "==", searchedValue), orderBy("timestamp"));
+            // Find all messages sent or received by this user
+            var fieldToQuery1 = "sender";
+            var fieldToQuery2 = "recipient";
+            var q = query(collectionRef,
+                or(where(fieldToQuery1, "==", searchedValue),
+                    where(fieldToQuery2, "==", searchedValue)),
+                orderBy("timestamp"));
 
             // Retrieve the results
             var querySnapshot = await getDocs(q);
+
+            // For each returned value
             querySnapshot.forEach((doc) => {
                 // doc.data() is never undefined for query doc snapshots
                 console.log(doc.data());
 
-                // Convert the Firestore timestamp to a JavaScript Date object
+                // Convert the Firestore timestamp to a JavaScript Date object and create date notation
                 const date = doc.data().timestamp.toDate();
-
-                // Get the month and day from the date
-
-                const month = String(date.getMonth() + 1).padStart(2, '0'); // + 1 so that January won't be 0 but 1 instead, and then 01 instead of 1
+                const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = date.getDate();
                 const hour = date.getHours();
                 const minute = date.getMinutes();
+                const resultTime = hour + ":" + minute + " " + day + "." + month;
 
-                const thisMessage = doc.data().messageText + " " + hour + ":" + minute + " " + day + "." + month;
+                const thisMessage = doc.data().messageText + " " + resultTime;
+                const sender = doc.data().sender;
                 if (thisMessage) {
-                    // console.log(thisMessage);
-                    setSentMessagesToDisplay((sentMessagesToDisplay) => [...sentMessagesToDisplay, thisMessage])
+                    console.log(thisMessage);
+                    setAllMessagesToDisplay((allMessagesToDisplay) => [...allMessagesToDisplay, [thisMessage, sender]]);
                 }
+
+                console.log(allMessagesToDisplay);
             });
-
-            // Find all messages received by this user
-            fieldToQuery = "recipient";
-            q = query(collectionRef, where(fieldToQuery, "==", searchedValue), orderBy("timestamp"));
-
-            // Retrieve the results
-            querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => {
-                // doc.data() is never undefined for query doc snapshots
-                console.log(doc.data());
-
-                // Convert the Firestore timestamp to a JavaScript Date object
-                const date = doc.data().timestamp.toDate();
-
-                // Get the month and day from the date
-
-                const month = String(date.getMonth() + 1).padStart(2, '0'); // + 1 so that January won't be 0 but 1 instead
-                const day = date.getDate();
-                const hour = date.getHours();
-                const minute = date.getMinutes();
-
-                const thisMessage = doc.data().messageText + " " + hour + ":" + minute + " " + day + "." + month;
-
-                if (thisMessage) {
-                    // console.log(thisMessage);
-                    setReceivedMessagesToDisplay((receivedMessagesToDisplay) => [...receivedMessagesToDisplay, thisMessage])
-                }
-            });
-
-
         }
     }
 
@@ -221,22 +197,14 @@ function ChatRoom() {
             <div id='middlePanel' className='panel'>
                 <h1>ChatRoom {pulledUser ? "of " + pulledUser.email : null}</h1>
                 <div className="message-container">
-                    <div className="messages">
-                        <h2>Sent messages</h2>
-                        <div className='sentMessages'>
-                            {sentMessagesToDisplay.map((message, index) => (
-                                <p key={index}>{message}</p>
-                            ))}
+                    {allMessagesToDisplay.map((message, index) => (
+                        <div className='singleMessage' key={index} >
+                            <div className={message[1] === pulledUser.email ? "sender" : "recipient"}>
+                                <p >{message[0]}</p>
+                            </div>
                         </div>
-                        <h2>Received messages</h2>
-                        <div className='receivedMessages'>
-                            {receivedMessagesToDisplay.map((message, index) => (
-                                <p key={index}>{message}</p>
-                            ))}
-                        </div>
-                    </div>
+                    ))}
                 </div>
-
 
                 <Form id='messageInput' onSubmit={handleFormSubmit}>
                     <Form.Group className="mb-3" >
