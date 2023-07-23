@@ -36,7 +36,7 @@ p {
         margin-bottom: 30px;
     }
 
-    .message-container {
+    #messageContainer {
         width: 100%;
         flex-grow: 1;
         overflow-y: scroll;
