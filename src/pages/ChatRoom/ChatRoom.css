@@ -22,7 +22,14 @@ p {
     font-size: large;
 }
 
+#leftPanel{
+    width: 250px;
+}
+
+/* The one with the chat inside */
 #middlePanel {
+    width: 70vw;
+
     #messageInput {
         width: 100%;
         margin-top: 10px;
@@ -56,19 +63,4 @@ div.recipient p {
 
 div.sender p {
     border: solid 2px blue;
-}
-
-#rightPanel {
-    align-items: normal;
-
-
-    .sentMessages p {
-        border: solid 1px blue;
-        border-radius: 3px;
-    }
-
-    .receivedMessages p {
-        border: solid 1px green;
-        border-radius: 3px;
-    }
 }

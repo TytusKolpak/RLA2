@@ -1,36 +1,29 @@
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 
-export function useCurrentUser() {
-    const auth = getAuth();
-    const [currentUser, setCurrentUser] = useState('');
-    useEffect(() => {
-        const unSubscribe = onAuthStateChanged(auth, (user) =>
-            setCurrentUser(user)
-        );
-        return unSubscribe;
-    }, [auth]);
-    return currentUser;
-}
+import "../Login/Login.css"
 
-const Login = () => {
+
+const Login = ({currentUser}) => {
+    const [errorMessage, setErrorMessage] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [currentUser, setCurrentUser] = useState();
     const navigate = useNavigate();
 
     const auth = getAuth();
 
-    // set currentUser only on auth change, render once per auth change
-    useEffect(() => {
-        onAuthStateChanged(auth, (user) =>
-            setCurrentUser(user)
-        );
-    }, [auth]);
+    // !important
+    // This very block of code has been moved to App.js for easier user data access (and is now passed to routes as an argument)
+    // // set currentUser only on auth change, render once per auth change
+    // useEffect(() => {
+    //     onAuthStateChanged(auth, (user) =>
+    //         setCurrentUser(user)
+    //     );
+    // }, [auth]);
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
@@ -54,6 +47,7 @@ const Login = () => {
                 // Failed to signed in 
                 console.log("errorCode", error.code);
                 console.log("errorMessage", error.message);
+                setErrorMessage(error.message)
             });
     }
 
@@ -70,8 +64,7 @@ const Login = () => {
     }
 
 
-    return (<>
-        <h1>Login page</h1>
+    return (<div className="Login"><h1>Login page</h1>
         <Form onSubmit={handleFormSubmit}>
             <Form.Group className="mb-3" controlId="formBasicEmail">
                 <Form.Label >Email address</Form.Label>
@@ -105,8 +98,8 @@ const Login = () => {
             }
 
         </Form>
-
-    </>);
+        <h4>{errorMessage}</h4>
+    </div>);
 };
 
 export default Login;
