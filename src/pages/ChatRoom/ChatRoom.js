@@ -169,6 +169,11 @@ function ChatRoom() {
         // eslint-disable-next-line
     }, [pulledUser, numberOfMessagesSent])
 
+
+    useEffect(()=>{
+        console.log("THIS SHOULD FIRE ONCE.");
+    },[])
+
     return (
         <div className='chatRoom'>
             <div id='leftPanel' className='panel'>
