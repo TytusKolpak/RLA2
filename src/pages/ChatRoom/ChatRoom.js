@@ -115,62 +115,7 @@ function ChatRoom({ currentUser }) {
                 });
             }
 
-            getLastMessage()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            // // //test
-            // const parentElement = document.getElementById("parentElement");
-
-            // // Create the outer div with class "singleMessage"
-            // const singleMessageDiv = document.createElement("div");
-            // singleMessageDiv.className = "singleMessage";
-
-            // // Create the inner div with class "sender"
-            // const senderDiv = document.createElement("div");
-            // senderDiv.className = "sender";
-
-            // // Create the <p> element with text content
-            // const paragraphElement = document.createElement("p");
-            // paragraphElement.textContent = "Text content goes here";
-
-            // // Append the <p> element to the "sender" div
-            // senderDiv.appendChild(paragraphElement);
-
-            // // Append the "sender" div to the "singleMessage" div
-            // singleMessageDiv.appendChild(senderDiv);
-
-            // // Insert the "singleMessage" div as the last child of the parentElement
-            // if (parentElement.lastElementChild) {
-            //     // If there are existing children, insert the new element after the last child
-            //     parentElement.insertBefore(singleMessageDiv, parentElement.lastElementChild.nextSibling);
-            // } else {
-            //     // If there are no existing children, simply append the new element
-            //     parentElement.appendChild(singleMessageDiv);
-            // }
-
-
+            getLastMessage();
         }
     }, [numberOfMessagesSent])
 
