@@ -14,10 +14,10 @@ import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy, or
 
 // (Get user state from different file as an argument (from App.js))
 function ChatRoom({ currentUser }) {
-
+    
     // Whole user object is sent in as an argument to this function and is now available for use (but we don't need it whole)
     // console.log("currentUser",currentUser);
-    const [currentUserEmail, setCurrentUserEmail] = useState()
+    const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
 
     const [numberOfMessagesSent, setNumberOfMessagesSent] = useState(0)
 
@@ -132,7 +132,6 @@ function ChatRoom({ currentUser }) {
         const collectionName = "testMessages";
         const collectionRef = collection(firestore, collectionName);
 
-        console.log("recipientEmail:", recipientEmail, "currentUserEmail:", currentUserEmail);
         // Query itself
         var q = query(collectionRef,
 
@@ -176,10 +175,9 @@ function ChatRoom({ currentUser }) {
             const minute = date.getMinutes();
             const resultTime = hour + ":" + minute + " " + day + "." + month;
 
-            const thisMessage = doc.data().messageText + " " + resultTime;
+            const thisMessage = doc.data().messageText + " |" + resultTime;
             const sender = doc.data().sender;
             if (thisMessage) {
-                // console.log(thisMessage);
                 setAllMessagesToDisplay((allMessagesToDisplay) => [...allMessagesToDisplay, [thisMessage, sender]]);
             }
         });
