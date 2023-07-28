@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
-import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy, or, and, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, or, and, limit, onSnapshot } from 'firebase/firestore';
 
 // for getting auth on reload
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -20,32 +20,32 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 function ChatRoom({ currentUser }) {
     // Whole user object is sent in as an argument to this function and is now available for use (but we don't need it whole)
     const auth = getAuth();
+    var unsubscribe = function () { }; // initializing a function to make it global
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
-
     const [numberOfMessagesSent, setNumberOfMessagesSent] = useState(0)
+    const [inputtedMessage, setInputtedMessage] = useState('');
+    const [allMessagesToDisplay, setAllMessagesToDisplay] = useState([]);
+    const [allContacts, setAllContacts] = useState([]);
+    const [radioValue, setRadioValue] = useState(0);
+    const [radios, setRadios] = useState([]);
+    const [recipientEmail, setRecipientEmail] = useState('')
 
-    // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact, also user on reload since we don't get currentUser form ChatRoom argument anymore
+
+    const collectionName = "testMessages";
+    // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact, also user on reload since we don't get currentUser form ChatRoom argument anymore. Also scroll down to the bottom of the messages div.
     useEffect(() => {
-        console.log("INITIALIZING user email");
+        console.log("Initializing user email");
         onAuthStateChanged(auth, (user) => {
             // console.log("user",user);
             // console.log(user.email);
-            setCurrentUserEmail(user.email)
+            setCurrentUserEmail(user.email);
         });
     }, [])
 
     // Only after I assigned a correct value to the currentUserEmail co i find current user's contacts
     useEffect(() => {
-        if (currentUserEmail) {
-            console.log("CALLING findUserContacts with currentUserEmail set to:", currentUserEmail);
-            findUserContacts();
-        }
+        currentUserEmail && findUserContacts();
     }, [currentUserEmail])
-
-    const [allContacts, setAllContacts] = useState([]);
-    const [radioValue, setRadioValue] = useState(0);
-    const [radios, setRadios] = useState([]);
-    const [recipientEmail, setRecipientEmail] = useState('')
 
     // Called on startup. Used to populate the left panel with possible message recipients (bound to currently logged user)
     // When the allContacts finish loading - create a set of radio buttons with those just-loaded contacts
@@ -59,136 +59,15 @@ function ChatRoom({ currentUser }) {
         setRecipientEmail(allContacts[0])
     }, [allContacts])
 
-    // Only after i have the recipient's email can i show their messages
+    // Only after i have the recipient's email can i show their messages (and scroll down)
     useEffect(() => {
-        if (recipientEmail) {
-            console.log("CALLING displayMessages with recipientEmail set to:", recipientEmail);
-            displayMessages();
-        }
+        recipientEmail && displayMessages();
     }, [recipientEmail])
 
-    // Display the just-created message
     useEffect(() => {
-        if (numberOfMessagesSent > 0) {
-            console.log("New message added");
-
-            async function getLastMessage() {
-                // Load the last one from the database
-
-                // Create a reference to the cities collection
-                const collectionName = "testMessages";
-                const collectionRef = collection(firestore, collectionName);
-
-                // Query itself
-                var q = query(collectionRef,
-                    or(
-                        and(
-                            where("sender", "==", currentUserEmail),
-                            where("recipient", "==", recipientEmail)
-                        ),
-                        and(
-                            where("sender", "==", recipientEmail),
-                            where("recipient", "==", currentUserEmail)
-                        )
-                    ),
-
-                    // Get the last one
-                    orderBy("timestamp", "desc"),
-                    limit(1));
-
-                // Retrieve the results
-                var querySnapshot = await getDocs(q);
-
-                // For each returned value
-                querySnapshot.forEach((doc) => {
-                    var date;
-                    if (doc.data().timestamp) {
-                        date = doc.data().timestamp.toDate();
-                    } else {
-                        date = new Date();
-                    }
-
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = date.getDate();
-                    const hour = date.getHours();
-                    const minute = date.getMinutes();
-                    const resultTime = hour + ":" + minute + " " + day + "." + month;
-
-                    const thisMessage = doc.data().messageText + " " + resultTime;
-                    const sender = doc.data().sender;
-                    if (thisMessage) {
-                        setAllMessagesToDisplay((allMessagesToDisplay) => [...allMessagesToDisplay, [thisMessage, sender]]);
-                    }
-                });
-            }
-
-            getLastMessage();
-        }
-    }, [numberOfMessagesSent])
-
-    const [inputtedMessage, setInputtedMessage] = useState('');
-
-    // Hook used in below very function
-    const [allMessagesToDisplay, setAllMessagesToDisplay] = useState([]);
-
-    // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
-    async function displayMessages() {
-        console.log("displayMessages");
-
-        // Create a reference to the cities collection
-        const collectionName = "testMessages";
-        const collectionRef = collection(firestore, collectionName);
-
-        // Query itself
-        var q = query(collectionRef,
-
-            // Where user is the sender AND selected contact is the receiver
-            // or
-            // User is the receiver and selected contact is the sender
-            or(
-                and(
-                    where("sender", "==", currentUserEmail),
-                    where("recipient", "==", recipientEmail)
-                ),
-                and(
-                    where("sender", "==", recipientEmail),
-                    where("recipient", "==", currentUserEmail)
-                )
-            ),
-
-            // Order them by time when they were created
-            orderBy("timestamp"));
-
-        // Retrieve the results
-        var querySnapshot = await getDocs(q);
-
-        // For each returned value
-        querySnapshot.forEach((doc) => {
-            // doc.data() is never undefined for query doc snapshots
-            // console.log(doc.data());
-
-            // Convert the Firestore timestamp to a JavaScript Date object and create date notation
-            // If the data did not have time to load up just SHOW current date, despite there being a correct date in database
-            var date;
-            if (doc.data().timestamp) {
-                date = doc.data().timestamp.toDate();
-            } else {
-                date = new Date();
-            }
-
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = date.getDate();
-            const hour = date.getHours();
-            const minute = date.getMinutes();
-            const resultTime = hour + ":" + minute + " " + day + "." + month;
-
-            const thisMessage = doc.data().messageText + " |" + resultTime;
-            const sender = doc.data().sender;
-            if (thisMessage) {
-                setAllMessagesToDisplay((allMessagesToDisplay) => [...allMessagesToDisplay, [thisMessage, sender]]);
-            }
-        });
-    }
+        // scroll down when the elements are loaded
+        scrollDown();
+    }, [allMessagesToDisplay])
 
     // What happens when user clicks Send button
     function handleFormSubmit(e) {
@@ -205,10 +84,80 @@ function ChatRoom({ currentUser }) {
         setInputtedMessage('')
     }
 
+    // Scroll down
+    function scrollDown() {
+        console.log("Scrolling down");
+        const messagesDiv = document.getElementById("messageContainer");
+        const contentHeight = messagesDiv.scrollHeight;
+        messagesDiv.scrollTo({
+            top: contentHeight,
+            behavior: 'instant',
+        })
+    }
+
+    // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
+    async function displayMessages() {
+        console.log("Displaying Messages");
+
+        // Create a reference to the cities collection
+        const collectionRef = collection(firestore, collectionName);
+
+        // For real-time listening to new messages
+        console.log("I attach listener for new messages received from:", recipientEmail);
+        const q2 = query(
+            collectionRef,
+
+            // Where user is the sender AND selected contact is the receiver
+            // or
+            // User is the receiver and selected contact is the sender
+            or(
+                and(
+                    where("sender", "==", currentUserEmail),
+                    where("recipient", "==", recipientEmail)
+                ),
+                and(
+                    where("sender", "==", recipientEmail),
+                    where("recipient", "==", currentUserEmail)
+                )
+            ),
+
+            // Order them by time when they were created
+            orderBy("timestamp"),
+            // Let's assume we need to display no more than 50 once (for now)
+            limit(50)
+        );
+
+        // unsubscribe is a function used elsewhere to detach a listener which is created by onSnapshot
+        unsubscribe = onSnapshot(q2, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    // console.log("New doc: ", change.doc.data());
+
+                    var date;
+                    if (change.doc.data().timestamp) {
+                        date = change.doc.data().timestamp.toDate();
+                    } else {
+                        date = new Date();
+                    }
+
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = date.getDate();
+                    const hour = date.getHours();
+                    const minute = date.getMinutes();
+                    const resultTime = hour + ":" + minute + " " + day + "." + month;
+
+                    const thisMessage = change.doc.data().messageText;
+                    const sender = change.doc.data().sender;
+
+                    setAllMessagesToDisplay((allMessagesToDisplay) => [...allMessagesToDisplay, [thisMessage, sender, resultTime]]);
+                }
+            });
+        });
+    }
+
     async function createMessageDoc() {
         try {
-            console.log("createMessageDoc");
-            const collectionName = "testMessages";
+            console.log("Creating a message document");
             const document = {
                 messageText: inputtedMessage,
                 sender: currentUserEmail, // this might need to change
@@ -232,9 +181,8 @@ function ChatRoom({ currentUser }) {
     }
 
     async function findUserContacts() {
-        console.log("findUserContacts");
-        const collectionName = "Contacts"
-        const collectionRef = collection(firestore, collectionName);
+        console.log("Finding user contacts");
+        const collectionRef = collection(firestore, "Contacts");
         // Create a query against the collection.
         const searchedValue = currentUserEmail;
 
@@ -264,6 +212,10 @@ function ChatRoom({ currentUser }) {
         setRadioValue(e.currentTarget.value)
         setRecipientEmail(radios[e.currentTarget.value].name)
         console.log("Changed contact to:", radios[e.currentTarget.value].name);
+
+        // Not to crowd with 18 different listeners we need to detach it when we want to change the subject which it is listened to
+        console.log("I detach listener for new messages received from:", recipientEmail);
+        unsubscribe();
     }
 
     return (
@@ -281,7 +233,7 @@ function ChatRoom({ currentUser }) {
                                 type="radio"
                                 name="set1"
                                 // For now it will not work with === instead of ==
-                                variant={radioValue == radio.value ? 'primary' : 'outline-primary'}
+                                variant={radioValue == radio.value ? 'primary' : 'secondary'}
                                 value={radio.value}
                                 checked={radioValue == radio.value}
                                 onChange={(e) => changedContact(e)}>
@@ -297,7 +249,10 @@ function ChatRoom({ currentUser }) {
                     {allMessagesToDisplay.map((message, index) => (
                         <div className='singleMessage' key={index} >
                             <div className={message[1] === currentUserEmail ? "sender" : "recipient"}>
-                                <p>{message[0]}</p>
+                                <div className='messageElements'>
+                                    <p className='timeDisplay'>{message[2]}</p>
+                                    <p className='textDisplay'>{message[0]}</p>
+                                </div>
                             </div>
                         </div>
                     ))}

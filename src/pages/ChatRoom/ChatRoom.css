@@ -39,7 +39,7 @@ p {
     #messageContainer {
         width: 100%;
         flex-grow: 1;
-        overflow-y: scroll;
+        overflow-y: auto;
         /* Enable vertical scrolling */
 
 
@@ -54,13 +54,31 @@ p {
             justify-content: flex-start;
             margin-left: 5px;
         }
+
+        .timeDisplay{
+            font-size: small;
+        }
     }
 }
 
-div.recipient p {
-    border: solid 2px grey;
+.timeDisplay{
+    margin: 0;
+    padding: 0;
 }
 
-div.sender p {
-    border: solid 2px blue;
+div.recipient .textDisplay {
+    background-color: rgba(238, 237, 237, 0.7);
+}
+
+div.sender .textDisplay {
+    background-color: rgba(137, 184, 255, 0.685);
+}
+@media (prefers-color-scheme: dark) {
+    div.recipient .textDisplay {
+        background-color: rgba(85, 85, 85, 0.7);
+    }
+    
+    div.sender .textDisplay {
+        background-color: rgba(0, 0, 255, 0.5);
+    }
 }
