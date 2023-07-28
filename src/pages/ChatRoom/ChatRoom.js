@@ -12,19 +12,26 @@ import { useEffect, useState } from 'react';
 import { firestore } from '../../firebase_setup/firebase';
 import { collection, getDocs, addDoc, query, where, serverTimestamp, orderBy, or, and, limit } from 'firebase/firestore';
 
-// (Get user state from different file as an argument (from App.js))
+// for getting auth on reload
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+// (Get user state from different file as an argument (from App.js)
+// but we also need it on reload
 function ChatRoom({ currentUser }) {
-    
     // Whole user object is sent in as an argument to this function and is now available for use (but we don't need it whole)
-    // console.log("currentUser",currentUser);
+    const auth = getAuth();
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
 
     const [numberOfMessagesSent, setNumberOfMessagesSent] = useState(0)
 
-    // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact
+    // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact, also user on reload since we don't get currentUser form ChatRoom argument anymore
     useEffect(() => {
         console.log("INITIALIZING user email");
-        setCurrentUserEmail(currentUser.email)
+        onAuthStateChanged(auth, (user) => {
+            // console.log("user",user);
+            // console.log(user.email);
+            setCurrentUserEmail(user.email)
+        });
     }, [])
 
     // Only after I assigned a correct value to the currentUserEmail co i find current user's contacts
@@ -307,10 +314,8 @@ function ChatRoom({ currentUser }) {
 
                     {currentUserEmail ?
                         <Button variant='primary' type="submit">Send</Button> :
-                        <>
-                            <Button variant='primary' type="submit" disabled>Send</Button>
-                            <p>Nobody is logged in.</p>
-                        </>}
+                        <Button variant='primary' type="submit" disabled>Send</Button>
+                    }
                 </Form>
             </div>
         </div>
