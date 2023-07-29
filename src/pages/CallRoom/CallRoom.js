@@ -1,20 +1,10 @@
-import { useEffect } from "react";
 import "./CallRoom.css"
-
 import { firestore } from '../../firebase_setup/firebase';
+import Button from 'react-bootstrap/Button';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Form from 'react-bootstrap/Form';
 
 const CallRoom = ({ currentUser }) => {
-
-    // init - call once on entry to the page
-    useEffect(() => {
-        document.querySelector('#cameraBtn').addEventListener('click', openUserMedia);
-        document.querySelector('#hangupBtn').addEventListener('click', hangUp);
-        document.querySelector('#createBtn').addEventListener('click', createRoom);
-        document.querySelector('#joinBtn').addEventListener('click', joinRoom);
-        roomDialog = new mdc.dialog.MDCDialog(document.querySelector('#room-dialog'));
-    }, [])
-
-    // DEfault configuration - Change these if you have a different STUN or TURN server.
     const configuration = {
         iceServers: [
             {
@@ -32,6 +22,21 @@ const CallRoom = ({ currentUser }) => {
     let remoteStream = null;
     let roomDialog = null;
     let roomId = null;
+
+    async function openUserMedia(e) {
+        const stream = await navigator.mediaDevices.getUserMedia(
+            { video: true, audio: true });
+        document.querySelector('#localVideo').srcObject = stream;
+        localStream = stream;
+        remoteStream = new MediaStream();
+        document.querySelector('#remoteVideo').srcObject = remoteStream;
+
+        console.log('Stream:', document.querySelector('#localVideo').srcObject);
+        document.querySelector('#cameraBtn').disabled = true;
+        document.querySelector('#joinBtn').disabled = false;
+        document.querySelector('#createBtn').disabled = false;
+        document.querySelector('#hangupBtn').disabled = false;
+    }
 
     async function createRoom() {
         document.querySelector('#createBtn').disabled = true;
@@ -125,21 +130,6 @@ const CallRoom = ({ currentUser }) => {
         }
     }
 
-    async function openUserMedia(e) {
-        const stream = await navigator.mediaDevices.getUserMedia(
-            { video: true, audio: true });
-        document.querySelector('#localVideo').srcObject = stream;
-        localStream = stream;
-        remoteStream = new MediaStream();
-        document.querySelector('#remoteVideo').srcObject = remoteStream;
-
-        console.log('Stream:', document.querySelector('#localVideo').srcObject);
-        document.querySelector('#cameraBtn').disabled = true;
-        document.querySelector('#joinBtn').disabled = false;
-        document.querySelector('#createBtn').disabled = false;
-        document.querySelector('#hangupBtn').disabled = false;
-    }
-
     async function hangUp(e) {
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
@@ -200,12 +190,50 @@ const CallRoom = ({ currentUser }) => {
     }
 
 
-
     return (
         <div className="CallRoom">
-            
+
             <h1>CallRoom of {currentUser.email}</h1>
 
+            <ButtonGroup className="buttonGroup1">
+                <Button variant="primary"
+                    onClick={()=>openUserMedia()}
+                >Open camera & microphone</Button>
+                <Button variant="secondary"
+                    onClick={()=>createRoom()}
+                >Create room</Button>
+                <Button variant="secondary"
+                    onClick={()=>joinRoom()}
+                >Join room</Button>
+                <Button variant="secondary"
+                    onClick={()=>hangUp()}
+                >Hangup</Button>
+            </ButtonGroup>
+
+            <div id="currentRoom">
+            </div>
+
+            <div id="videos">
+                <video id="localVideo" muted autoPlay playsInline></video>
+                <video id="remoteVideo" autoPlay playsInline></video>
+            </div>
+
+            <div id="room-dialog">
+                <h2 id="my-dialog-title">Join room</h2>
+
+                <Form>
+                    <Form.Group className="mb-3" >
+                        <Form.Label>Enter ID for room to join:</Form.Label>
+                        <Form.Control placeholder="Enter ID" />
+                    </Form.Group>
+
+                    <div className="spaceBetween">
+                        <Button variant="primary">Join</Button>
+                        <Button variant="secondary">Cancel</Button>
+                    </div>
+                </Form>
+
+            </div>
         </div>
     );
 };
