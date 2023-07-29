@@ -3,8 +3,16 @@ import { firestore } from '../../firebase_setup/firebase';
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
+import Modal from 'react-bootstrap/Modal';
+
+import { useState } from "react";
 
 const CallRoom = ({ currentUser }) => {
+    // for showing modal
+    const [show, setShow] = useState(false);
+    const handleClose = () => setShow(false);
+    const handleShow = () => setShow(true);
+
     const configuration = {
         iceServers: [
             {
@@ -92,7 +100,11 @@ const CallRoom = ({ currentUser }) => {
                     '#currentRoom').innerText = `Current room is ${roomId} - You are the callee!`;
                 await joinRoomById(roomId);
             }, { once: true });
-        roomDialog.open();
+
+        // Instead of this
+        // roomDialog.open();
+        // I try this
+        handleShow()
     }
 
     async function joinRoomById(roomId) {
@@ -197,16 +209,16 @@ const CallRoom = ({ currentUser }) => {
 
             <ButtonGroup className="buttonGroup1">
                 <Button variant="primary"
-                    onClick={()=>openUserMedia()}
+                    onClick={openUserMedia}
                 >Open camera & microphone</Button>
                 <Button variant="secondary"
-                    onClick={()=>createRoom()}
+                    onClick={createRoom}
                 >Create room</Button>
                 <Button variant="secondary"
-                    onClick={()=>joinRoom()}
+                    onClick={joinRoom}
                 >Join room</Button>
                 <Button variant="secondary"
-                    onClick={()=>hangUp()}
+                    onClick={hangUp}
                 >Hangup</Button>
             </ButtonGroup>
 
@@ -218,22 +230,29 @@ const CallRoom = ({ currentUser }) => {
                 <video id="remoteVideo" autoPlay playsInline></video>
             </div>
 
-            <div id="room-dialog">
-                <h2 id="my-dialog-title">Join room</h2>
+            <Button variant="primary" onClick={handleShow}>
+                Launch demo modal
+            </Button>
 
-                <Form>
-                    <Form.Group className="mb-3" >
-                        <Form.Label>Enter ID for room to join:</Form.Label>
-                        <Form.Control placeholder="Enter ID" />
-                    </Form.Group>
+            <Modal show={show} onHide={handleClose} backdrop="static" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Join room</Modal.Title>
+                </Modal.Header>
 
-                    <div className="spaceBetween">
-                        <Button variant="primary">Join</Button>
-                        <Button variant="secondary">Cancel</Button>
-                    </div>
-                </Form>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3" >
+                            <Form.Label>Enter ID for room to join:</Form.Label>
+                            <Form.Control placeholder="Enter ID" />
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
 
-            </div>
+                <Modal.Footer>
+                    <Button variant="primary">Join</Button>
+                    <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 };
