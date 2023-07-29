@@ -19,7 +19,7 @@ const Layout = ({ currentUser }) => {
                     <Link to="/">Home</Link>
                     <Link to="/login">Login</Link>
                     <Link to="/signup">Signup</Link>
-                    <Link to="/crud">Crud</Link>
+                    <Link to="/callRoom">callRoom</Link>
                     {currentUser && <Link to="/chatRoom">ChatRoom</Link>}
                 </Container>
             </Navbar >

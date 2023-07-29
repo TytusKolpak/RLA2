@@ -2,12 +2,13 @@ import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "../pages/Layout";
-import Home from "../pages/Home";
+import Home from "../pages/Home/Home";
 import Login from "../pages/Login/Login";
-import Signup from "../pages/Signup";
-import Crud from "../pages/Crud";
-import NoPage from "../pages/NoPage";
+import Signup from "../pages/Signup/Signup";
+import NoPage from "../pages/NoPage/NoPage";
 import ChatRoom from "../pages/ChatRoom/ChatRoom";
+import CallRoom from '../pages/CallRoom/CallRoom';
+
 import { useState, useEffect } from 'react';
 
 // // Get user state from different file
@@ -36,8 +37,8 @@ function App() {
                         <Route index element={<Home />} />
                         <Route path="login" element={<Login currentUser={currentUser}/>} />
                         <Route path="signup" element={<Signup />} />
-                        <Route path="crud" element={<Crud />} />
                         <Route path="chatRoom" element={<ChatRoom currentUser={currentUser} />} />
+                        <Route path="callRoom" element={<CallRoom currentUser={currentUser} />} />
 
                         {/* The path="*" specifies that any uncovered path will lead to this element */}
                         <Route path="*" element={<NoPage />} />

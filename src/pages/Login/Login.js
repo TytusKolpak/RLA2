@@ -91,7 +91,8 @@ const Login = ({currentUser}) => {
                     ?
                     <>
                         <Button variant='secondary' onClick={mySignOut}>Log out</Button>
-                        <p>Hi {email}</p>
+                        {/* Get content of the email without anything after @, including @ */}
+                        <p>Hi {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</p>
                     </>
                     :
                     <Button variant='primary' type="submit">Log in</Button>
