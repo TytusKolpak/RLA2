@@ -96,7 +96,6 @@
 }
 
 @media (prefers-color-scheme: dark) {
-
     .modal-content {
         background-color: rgb(51, 51, 51);
         color: #fff;
@@ -105,5 +104,8 @@
     .btn-close {
         filter: invert(1);
     }
+}
 
+button.btn{
+    margin: 3px;
 }

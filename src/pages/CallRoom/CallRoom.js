@@ -5,14 +5,14 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
-var unsub = function () { };
+var unsubscribe = function () { }; // initializing a function to make it global
 
 const CallRoom = ({ currentUser }) => {
     const [showModal, setShowModal] = useState(false);
@@ -21,7 +21,9 @@ const CallRoom = ({ currentUser }) => {
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
 
-
+    useEffect(()=>{
+        return unsubscribe();
+    },[])
     const configuration = {
         iceServers: [
             {
@@ -89,7 +91,8 @@ const CallRoom = ({ currentUser }) => {
 
         // add document to this database, to this collection, with this content
         const roomRef = await addDoc(collection(firestore, "rooms"), roomWithOffer);
-        const roomId = roomRef.id;
+        const roomId = roomRef.id; // for this value here
+        setRoomId(roomRef.id); // for global accessibility right after room creation (in hang up doc deletion)
         setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
 
         // Code for creating room document above
@@ -116,14 +119,17 @@ const CallRoom = ({ currentUser }) => {
         });
 
         // Listening for remote session description below
-        // unsub is a function to detach a listener for the doc change
-        unsub = onSnapshot(roomRef, async snapshot => {
-            console.log('Got updated room:', snapshot.data());
-            const data = snapshot.data();
-            if (!peerConnection.currentRemoteDescription && data.answer) {
-                console.log('Set remote description: ', data.answer);
-                const answer = new RTCSessionDescription(data.answer)
-                await peerConnection.setRemoteDescription(answer);
+        unsubscribe = onSnapshot(roomRef, async snapshot => {
+
+            // When we hang up it enters here and tries to access null data (bc we delete we could check if the change is deletion, but it does the same thing as this if)
+            if (snapshot.data()) {
+                console.log('Got updated room:', snapshot.data());
+                const data = snapshot.data();
+                if (!peerConnection.currentRemoteDescription && data.answer) {
+                    console.log('Set remote description: ', data.answer);
+                    const answer = new RTCSessionDescription(data.answer)
+                    await peerConnection.setRemoteDescription(answer);
+                }
             }
         });
         // Listening for remote session description above
@@ -147,8 +153,9 @@ const CallRoom = ({ currentUser }) => {
     }
 
     async function joinRoomById(roomId) {
-        const roomRef = firestore.collection('rooms').doc(`${roomId}`);
-        const roomSnapshot = await roomRef.get();
+        console.log("join room by id:", roomId);
+        const roomRef = doc(firestore, 'rooms', roomId)
+        const roomSnapshot = await getDoc(roomRef);
         console.log('Got room:', roomSnapshot.exists);
 
         if (roomSnapshot.exists) {
@@ -160,7 +167,7 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for collecting ICE candidates below
-
+            // collectIceCandidates(roomRef, peerConnection, localName, remoteName)
             // Code for collecting ICE candidates above
 
             peerConnection.addEventListener('track', event => {
@@ -172,7 +179,18 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for creating SDP answer below
+            const offer = roomSnapshot.data().offer;
+            await peerConnection.setRemoteDescription(offer);
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
 
+            const roomWithAnswer = {
+                answer: {
+                    type: answer.type,
+                    sdp: answer.sdp
+                }
+            }
+            await updateDoc(roomRef, roomWithAnswer)
             // Code for creating SDP answer above
 
             // Listening for remote ICE candidates below
@@ -198,24 +216,17 @@ const CallRoom = ({ currentUser }) => {
         document.querySelector('#localVideo').srcObject = null;
         document.querySelector('#remoteVideo').srcObject = null;
 
+        setPrimaryMainButton(0);
         setCreateRoomBtnDisabled([false, true, true, true]);
         setCurrentRoomText('');
 
         // Delete room on hangup
         if (roomId) {
-            const roomRef = firestore.collection('rooms').doc(roomId);
-            const calleeCandidates = await roomRef.collection('calleeCandidates').get();
-            calleeCandidates.forEach(async candidate => {
-                await candidate.delete();
-            });
-            const callerCandidates = await roomRef.collection('callerCandidates').get();
-            callerCandidates.forEach(async candidate => {
-                await candidate.delete();
-            });
-            await roomRef.delete();
+            const roomRef = doc(firestore, 'rooms', roomId);
+            // if (! there are any other users in call){
+            await deleteDoc(roomRef);
+            //}
         }
-
-        document.location.reload(true);
     }
 
     function registerPeerConnectionListeners() {
