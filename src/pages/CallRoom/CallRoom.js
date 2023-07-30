@@ -5,13 +5,19 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { collection, addDoc } from 'firebase/firestore';
 
 const CallRoom = ({ currentUser }) => {
-    // for showing modal
-    const [show, setShow] = useState(false);
-    const handleClose = () => setShow(false);
-    const handleShow = () => setShow(true);
+    const [showModal, setShowModal] = useState(false);
+    const [mainButtonsState, setCreateRoomBtnDisabled] = useState([false, true, true, true]); // disabled / not disabled 
+    const [primaryMainButton, setPrimaryMainButton] = useState(0)
+    const [roomId, setRoomId] = useState('');
+    const [currentRoomText, setCurrentRoomText] = useState('');
+    const [peerConnection, setPeerConnection] = useState(null);
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
 
     const configuration = {
         iceServers: [
@@ -25,40 +31,90 @@ const CallRoom = ({ currentUser }) => {
         iceCandidatePoolSize: 10,
     };
 
-    let peerConnection = null;
-    let localStream = null;
-    let remoteStream = null;
-    let roomDialog = null;
-    let roomId = null;
+    useEffect(() => {
+        // Don't add a listener to a null value
+        if (peerConnection) {
+            peerConnection.addEventListener('icegatheringstatechange', () => {
+                console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
+            });
+
+            peerConnection.addEventListener('connectionstatechange', () => {
+                console.log(`Connection state change: ${peerConnection.connectionState}`);
+            });
+
+            peerConnection.addEventListener('signalingstatechange', () => {
+                console.log(`Signaling state change: ${peerConnection.signalingState}`);
+            });
+
+            peerConnection.addEventListener('iceconnectionstatechange ', () => {
+                console.log(`ICE connection state change: ${peerConnection.iceConnectionState}`);
+            });
+        }
+    }, [peerConnection])
 
     async function openUserMedia(e) {
+        setCreateRoomBtnDisabled([true, false, false, false]);
+        setPrimaryMainButton(1);
+
         const stream = await navigator.mediaDevices.getUserMedia(
             { video: true, audio: true });
         document.querySelector('#localVideo').srcObject = stream;
-        localStream = stream;
-        remoteStream = new MediaStream();
+        setLocalStream(stream);
+        console.log(localStream);
+        setRemoteStream(new MediaStream());
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
-        document.querySelector('#cameraBtn').disabled = true;
-        document.querySelector('#joinBtn').disabled = false;
-        document.querySelector('#createBtn').disabled = false;
-        document.querySelector('#hangupBtn').disabled = false;
+    }
+
+    async function collectIceCandidates(roomRef, peerConnection, localName, remoteName) {
+        const candidatesCollection = roomRef.collection(localName);
+
+        peerConnection.addEventListener('icecandidate', event => {
+            if (event.candidate) {
+                const json = event.candidate.toJSON();
+                candidatesCollection.add(json);
+            }
+        });
+
+        roomRef.collection(remoteName).onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === "added") {
+                    const candidate = new RTCIceCandidate(change.doc.data());
+                    peerConnection.addIceCandidate(candidate);
+                }
+            });
+        })
     }
 
     async function createRoom() {
-        document.querySelector('#createBtn').disabled = true;
-        document.querySelector('#joinBtn').disabled = true;
 
         console.log('Create PeerConnection with configuration: ', configuration);
-        peerConnection = new RTCPeerConnection(configuration);
+        setPeerConnection(new RTCPeerConnection(configuration));
 
-        registerPeerConnectionListeners();
+        // I swap this function for use state with dependency of peerConnection
+        // registerPeerConnectionListeners();
 
-        // Add code for creating a room here
+        // Code for creating room document below
 
-        // Code for creating room above
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
 
+        const roomWithOffer = {
+            offer: {
+                type: offer.type,
+                sdp: offer.sdp
+            }
+        }
+
+        // add document to this database, to this collection, with this content
+        const roomRef = await addDoc(collection(firestore, "rooms"), roomWithOffer);
+        const roomId = roomRef.id;
+        setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
+
+        // Code for creating room document above
+
+        console.log(localStream);
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
@@ -80,7 +136,15 @@ const CallRoom = ({ currentUser }) => {
         });
 
         // Listening for remote session description below
-
+        roomRef.onSnapshot(async snapshot => {
+            console.log('Got updated room:', snapshot.data());
+            const data = snapshot.data();
+            if (!peerConnection.currentRemoteDescription && data.answer) {
+                console.log('Set remote description: ', data.answer);
+                const answer = new RTCSessionDescription(data.answer)
+                await peerConnection.setRemoteDescription(answer);
+            }
+        });
         // Listening for remote session description above
 
         // Listen for remote ICE candidates below
@@ -88,23 +152,17 @@ const CallRoom = ({ currentUser }) => {
         // Listen for remote ICE candidates above
     }
 
+    // This is called when user clicks Join room button on the screen
     function joinRoom() {
-        document.querySelector('#createBtn').disabled = true;
-        document.querySelector('#joinBtn').disabled = true;
+        // Show the modal asking for inputting roomId value, which will later call joinRoomById
+        setShowModal(true);
+    }
 
-        document.querySelector('#confirmJoinBtn').
-            addEventListener('click', async () => {
-                roomId = document.querySelector('#room-id').value;
-                console.log('Join room: ', roomId);
-                document.querySelector(
-                    '#currentRoom').innerText = `Current room is ${roomId} - You are the callee!`;
-                await joinRoomById(roomId);
-            }, { once: true });
-
-        // Instead of this
-        // roomDialog.open();
-        // I try this
-        handleShow()
+    async function confirmJoin() {
+        console.log('Join room:', roomId);
+        setCurrentRoomText(`Current room is ${roomId} - You are the callee!`);
+        await joinRoomById(roomId);
+        setShowModal(false)
     }
 
     async function joinRoomById(roomId) {
@@ -115,7 +173,10 @@ const CallRoom = ({ currentUser }) => {
         if (roomSnapshot.exists) {
             console.log('Create PeerConnection with configuration: ', configuration);
             peerConnection = new RTCPeerConnection(configuration);
-            registerPeerConnectionListeners();
+
+            // I swap this function for use state with dependency of peerConnection
+            // registerPeerConnectionListeners(); 
+
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
             });
@@ -162,7 +223,7 @@ const CallRoom = ({ currentUser }) => {
         document.querySelector('#joinBtn').disabled = true;
         document.querySelector('#createBtn').disabled = true;
         document.querySelector('#hangupBtn').disabled = true;
-        document.querySelector('#currentRoom').innerText = '';
+        setCurrentRoomText('');
 
         // Delete room on hangup
         if (roomId) {
@@ -181,48 +242,38 @@ const CallRoom = ({ currentUser }) => {
         document.location.reload(true);
     }
 
-    function registerPeerConnectionListeners() {
-        peerConnection.addEventListener('icegatheringstatechange', () => {
-            console.log(
-                `ICE gathering state changed: ${peerConnection.iceGatheringState}`);
-        });
+    // function registerPeerConnectionListeners() {
+    //     peerConnection.addEventListener('icegatheringstatechange', () => {
+    //         console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
+    //     });
 
-        peerConnection.addEventListener('connectionstatechange', () => {
-            console.log(`Connection state change: ${peerConnection.connectionState}`);
-        });
+    //     peerConnection.addEventListener('connectionstatechange', () => {
+    //         console.log(`Connection state change: ${peerConnection.connectionState}`);
+    //     });
 
-        peerConnection.addEventListener('signalingstatechange', () => {
-            console.log(`Signaling state change: ${peerConnection.signalingState}`);
-        });
+    //     peerConnection.addEventListener('signalingstatechange', () => {
+    //         console.log(`Signaling state change: ${peerConnection.signalingState}`);
+    //     });
 
-        peerConnection.addEventListener('iceconnectionstatechange ', () => {
-            console.log(
-                `ICE connection state change: ${peerConnection.iceConnectionState}`);
-        });
-    }
-
+    //     peerConnection.addEventListener('iceconnectionstatechange ', () => {
+    //         console.log(`ICE connection state change: ${peerConnection.iceConnectionState}`);
+    //     });
+    // }
 
     return (
         <div className="CallRoom">
 
             <h1>CallRoom of {currentUser.email}</h1>
 
-            <ButtonGroup className="buttonGroup1">
-                <Button variant="primary"
-                    onClick={openUserMedia}
-                >Open camera & microphone</Button>
-                <Button variant="secondary"
-                    onClick={createRoom}
-                >Create room</Button>
-                <Button variant="secondary"
-                    onClick={joinRoom}
-                >Join room</Button>
-                <Button variant="secondary"
-                    onClick={hangUp}
-                >Hangup</Button>
-            </ButtonGroup>
+            <div className="mainButtons">
+                <Button variant={primaryMainButton == 0 ? "primary" : "secondary"} onClick={openUserMedia} disabled={mainButtonsState[0]} >Open camera & microphone</Button>
+                <Button variant={primaryMainButton == 1 ? "primary" : "secondary"} onClick={createRoom} disabled={mainButtonsState[1]}>Create room</Button>
+                <Button variant={primaryMainButton == 2 ? "primary" : "secondary"} onClick={joinRoom} disabled={mainButtonsState[2]} >Join room</Button>
+                <Button variant={primaryMainButton == 3 ? "primary" : "secondary"} onClick={hangUp} disabled={mainButtonsState[3]} >Hangup</Button>
+            </div>
 
             <div id="currentRoom">
+                {currentRoomText}
             </div>
 
             <div id="videos">
@@ -230,11 +281,11 @@ const CallRoom = ({ currentUser }) => {
                 <video id="remoteVideo" autoPlay playsInline></video>
             </div>
 
-            <Button variant="primary" onClick={handleShow}>
+            <Button variant="primary" onClick={() => setShowModal(true)}>
                 Launch demo modal
             </Button>
 
-            <Modal show={show} onHide={handleClose} backdrop="static" centered>
+            <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Join room</Modal.Title>
                 </Modal.Header>
@@ -243,17 +294,20 @@ const CallRoom = ({ currentUser }) => {
                     <Form>
                         <Form.Group className="mb-3" >
                             <Form.Label>Enter ID for room to join:</Form.Label>
-                            <Form.Control placeholder="Enter ID" />
+                            <Form.Control
+                                placeholder="Enter ID"
+                                value={roomId}
+                                onChange={e => setRoomId(e.target.value)} />
                         </Form.Group>
                     </Form>
                 </Modal.Body>
 
                 <Modal.Footer>
-                    <Button variant="primary">Join</Button>
-                    <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+                    <Button variant="primary" onClick={confirmJoin}>Join</Button>
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
                 </Modal.Footer>
             </Modal>
-        </div>
+        </div >
     );
 };
 
