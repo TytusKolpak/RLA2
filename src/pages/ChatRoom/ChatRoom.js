@@ -40,6 +40,11 @@ function ChatRoom({ currentUser }) {
             // console.log(user.email);
             setCurrentUserEmail(user.email);
         });
+
+        return (() => {
+            console.log("I detach listener for new messages received from last recipient");
+            unsubscribe();
+        })
     }, [])
 
     // Only after I assigned a correct value to the currentUserEmail co i find current user's contacts

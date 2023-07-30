@@ -5,9 +5,14 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
+
+let peerConnection = null;
+let localStream = null;
+let remoteStream = null;
+var unsub = function () { };
 
 const CallRoom = ({ currentUser }) => {
     const [showModal, setShowModal] = useState(false);
@@ -15,9 +20,7 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
-    const [peerConnection, setPeerConnection] = useState(null);
-    const [localStream, setLocalStream] = useState(null);
-    const [remoteStream, setRemoteStream] = useState(null);
+
 
     const configuration = {
         iceServers: [
@@ -31,27 +34,6 @@ const CallRoom = ({ currentUser }) => {
         iceCandidatePoolSize: 10,
     };
 
-    useEffect(() => {
-        // Don't add a listener to a null value
-        if (peerConnection) {
-            peerConnection.addEventListener('icegatheringstatechange', () => {
-                console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
-            });
-
-            peerConnection.addEventListener('connectionstatechange', () => {
-                console.log(`Connection state change: ${peerConnection.connectionState}`);
-            });
-
-            peerConnection.addEventListener('signalingstatechange', () => {
-                console.log(`Signaling state change: ${peerConnection.signalingState}`);
-            });
-
-            peerConnection.addEventListener('iceconnectionstatechange ', () => {
-                console.log(`ICE connection state change: ${peerConnection.iceConnectionState}`);
-            });
-        }
-    }, [peerConnection])
-
     async function openUserMedia(e) {
         setCreateRoomBtnDisabled([true, false, false, false]);
         setPrimaryMainButton(1);
@@ -59,9 +41,8 @@ const CallRoom = ({ currentUser }) => {
         const stream = await navigator.mediaDevices.getUserMedia(
             { video: true, audio: true });
         document.querySelector('#localVideo').srcObject = stream;
-        setLocalStream(stream);
-        console.log(localStream);
-        setRemoteStream(new MediaStream());
+        localStream = stream;
+        remoteStream = new MediaStream();
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
@@ -90,10 +71,9 @@ const CallRoom = ({ currentUser }) => {
     async function createRoom() {
 
         console.log('Create PeerConnection with configuration: ', configuration);
-        setPeerConnection(new RTCPeerConnection(configuration));
+        peerConnection = new RTCPeerConnection(configuration);
 
-        // I swap this function for use state with dependency of peerConnection
-        // registerPeerConnectionListeners();
+        registerPeerConnectionListeners();
 
         // Code for creating room document below
 
@@ -136,7 +116,8 @@ const CallRoom = ({ currentUser }) => {
         });
 
         // Listening for remote session description below
-        roomRef.onSnapshot(async snapshot => {
+        // unsub is a function to detach a listener for the doc change
+        unsub = onSnapshot(roomRef, async snapshot => {
             console.log('Got updated room:', snapshot.data());
             const data = snapshot.data();
             if (!peerConnection.currentRemoteDescription && data.answer) {
@@ -173,10 +154,7 @@ const CallRoom = ({ currentUser }) => {
         if (roomSnapshot.exists) {
             console.log('Create PeerConnection with configuration: ', configuration);
             peerConnection = new RTCPeerConnection(configuration);
-
-            // I swap this function for use state with dependency of peerConnection
-            // registerPeerConnectionListeners(); 
-
+            registerPeerConnectionListeners();
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
             });
@@ -219,10 +197,8 @@ const CallRoom = ({ currentUser }) => {
 
         document.querySelector('#localVideo').srcObject = null;
         document.querySelector('#remoteVideo').srcObject = null;
-        document.querySelector('#cameraBtn').disabled = false;
-        document.querySelector('#joinBtn').disabled = true;
-        document.querySelector('#createBtn').disabled = true;
-        document.querySelector('#hangupBtn').disabled = true;
+
+        setCreateRoomBtnDisabled([false, true, true, true]);
         setCurrentRoomText('');
 
         // Delete room on hangup
@@ -242,23 +218,25 @@ const CallRoom = ({ currentUser }) => {
         document.location.reload(true);
     }
 
-    // function registerPeerConnectionListeners() {
-    //     peerConnection.addEventListener('icegatheringstatechange', () => {
-    //         console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
-    //     });
+    function registerPeerConnectionListeners() {
+        peerConnection.addEventListener('icegatheringstatechange', () => {
+            console.log(
+                `ICE gathering state changed: ${peerConnection.iceGatheringState}`);
+        });
 
-    //     peerConnection.addEventListener('connectionstatechange', () => {
-    //         console.log(`Connection state change: ${peerConnection.connectionState}`);
-    //     });
+        peerConnection.addEventListener('connectionstatechange', () => {
+            console.log(`Connection state change: ${peerConnection.connectionState}`);
+        });
 
-    //     peerConnection.addEventListener('signalingstatechange', () => {
-    //         console.log(`Signaling state change: ${peerConnection.signalingState}`);
-    //     });
+        peerConnection.addEventListener('signalingstatechange', () => {
+            console.log(`Signaling state change: ${peerConnection.signalingState}`);
+        });
 
-    //     peerConnection.addEventListener('iceconnectionstatechange ', () => {
-    //         console.log(`ICE connection state change: ${peerConnection.iceConnectionState}`);
-    //     });
-    // }
+        peerConnection.addEventListener('iceconnectionstatechange ', () => {
+            console.log(
+                `ICE connection state change: ${peerConnection.iceConnectionState}`);
+        });
+    }
 
     return (
         <div className="CallRoom">
@@ -280,10 +258,6 @@ const CallRoom = ({ currentUser }) => {
                 <video id="localVideo" muted autoPlay playsInline></video>
                 <video id="remoteVideo" autoPlay playsInline></video>
             </div>
-
-            <Button variant="primary" onClick={() => setShowModal(true)}>
-                Launch demo modal
-            </Button>
 
             <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>
                 <Modal.Header closeButton>
