@@ -1,7 +1,6 @@
 import "./CallRoom.css"
 import { firestore } from '../../firebase_setup/firebase';
 import Button from 'react-bootstrap/Button';
-import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 
@@ -21,9 +20,9 @@ const CallRoom = ({ currentUser }) => {
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
 
-    useEffect(()=>{
+    useEffect(() => {
         return unsubscribe();
-    },[])
+    }, [])
     const configuration = {
         iceServers: [
             {
@@ -50,35 +49,13 @@ const CallRoom = ({ currentUser }) => {
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
     }
 
-    async function collectIceCandidates(roomRef, peerConnection, localName, remoteName) {
-        const candidatesCollection = roomRef.collection(localName);
-
-        peerConnection.addEventListener('icecandidate', event => {
-            if (event.candidate) {
-                const json = event.candidate.toJSON();
-                candidatesCollection.add(json);
-            }
-        });
-
-        roomRef.collection(remoteName).onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === "added") {
-                    const candidate = new RTCIceCandidate(change.doc.data());
-                    peerConnection.addIceCandidate(candidate);
-                }
-            });
-        })
-    }
-
     async function createRoom() {
-
         console.log('Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
 
         registerPeerConnectionListeners();
 
-        // Code for creating room document below
-
+        //--
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -89,27 +66,19 @@ const CallRoom = ({ currentUser }) => {
             }
         }
 
-        // add document to this database, to this collection, with this content
+        // add a new room document to this database, to this collection, with this content
         const roomRef = await addDoc(collection(firestore, "rooms"), roomWithOffer);
         const roomId = roomRef.id; // for this value here
         setRoomId(roomRef.id); // for global accessibility right after room creation (in hang up doc deletion)
         setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
 
-        // Code for creating room document above
-
+        //idk what this does
         console.log(localStream);
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
 
-        // Code for creating a room below
-
-        // Code for creating a room above
-
-        // Code for collecting ICE candidates below
-
-        // Code for collecting ICE candidates above
-
+        //idk what this does
         peerConnection.addEventListener('track', event => {
             console.log('Got remote track:', event.streams[0]);
             event.streams[0].getTracks().forEach(track => {
@@ -117,6 +86,21 @@ const CallRoom = ({ currentUser }) => {
                 remoteStream.addTrack(track);
             });
         });
+        //--
+
+        // create a subcollection in the room document
+        // Code for collecting ICE candidates below
+        const callerCandidatesCollection = roomRef.collection('callerCandidates');
+
+        peerConnection.addEventListener('icecandidate', event => {
+            if (!event.candidate) {
+                console.log('Got final candidate!');
+                return;
+            }
+            console.log('Got candidate: ', event.candidate);
+            callerCandidatesCollection.add(event.candidate.toJSON());
+        });
+        // Code for collecting ICE candidates above
 
         // Listening for remote session description below
         unsubscribe = onSnapshot(roomRef, async snapshot => {
@@ -135,7 +119,15 @@ const CallRoom = ({ currentUser }) => {
         // Listening for remote session description above
 
         // Listen for remote ICE candidates below
-
+        roomRef.collection('calleeCandidates').onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type === 'added') {
+                    let data = change.doc.data();
+                    console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                }
+            });
+        });
         // Listen for remote ICE candidates above
     }
 
@@ -167,7 +159,15 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for collecting ICE candidates below
-            // collectIceCandidates(roomRef, peerConnection, localName, remoteName)
+            const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
+            peerConnection.addEventListener('icecandidate', event => {
+                if (!event.candidate) {
+                    console.log('Got final candidate!');
+                    return;
+                }
+                console.log('Got candidate: ', event.candidate);
+                calleeCandidatesCollection.add(event.candidate.toJSON());
+            });
             // Code for collecting ICE candidates above
 
             peerConnection.addEventListener('track', event => {
@@ -194,7 +194,15 @@ const CallRoom = ({ currentUser }) => {
             // Code for creating SDP answer above
 
             // Listening for remote ICE candidates below
-
+            roomRef.collection('callerCandidates').onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(async change => {
+                    if (change.type === 'added') {
+                        let data = change.doc.data();
+                        console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                    }
+                });
+            });
             // Listening for remote ICE candidates above
         }
     }
