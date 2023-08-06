@@ -90,7 +90,8 @@ const CallRoom = ({ currentUser }) => {
 
         // create a subcollection in the room document
         // Code for collecting ICE candidates below
-        const callerCandidatesCollection = roomRef.collection('callerCandidates');
+        //                                     database collection document subcollection
+        const callerCandidatesCollection = collection(firestore, "rooms", roomId, "callerCandidates");
 
         peerConnection.addEventListener('icecandidate', event => {
             if (!event.candidate) {
@@ -98,7 +99,12 @@ const CallRoom = ({ currentUser }) => {
                 return;
             }
             console.log('Got candidate: ', event.candidate);
-            callerCandidatesCollection.add(event.candidate.toJSON());
+
+            // add a new candidate document to the ICECandidates subcollection
+            async function addCaller() {
+                await addDoc(callerCandidatesCollection, event.candidate.toJSON());
+            }
+            addCaller();
         });
         // Code for collecting ICE candidates above
 
@@ -119,7 +125,8 @@ const CallRoom = ({ currentUser }) => {
         // Listening for remote session description above
 
         // Listen for remote ICE candidates below
-        roomRef.collection('calleeCandidates').onSnapshot(snapshot => {
+        const calleeCandidatesCollection = collection(firestore, "rooms", roomId, "calleeCandidates");
+        onSnapshot(calleeCandidatesCollection, async snapshot => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
                     let data = change.doc.data();
@@ -159,14 +166,20 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for collecting ICE candidates below
-            const calleeCandidatesCollection = roomRef.collection('calleeCandidates');
+            const calleeCandidatesCollection = collection(firestore, "rooms", roomId, "calleeCandidates");
+
             peerConnection.addEventListener('icecandidate', event => {
                 if (!event.candidate) {
                     console.log('Got final candidate!');
                     return;
                 }
                 console.log('Got candidate: ', event.candidate);
-                calleeCandidatesCollection.add(event.candidate.toJSON());
+
+                // add a new candidate document to the ICECandidates subcollection
+                async function addCallee() {
+                    await addDoc(calleeCandidatesCollection, event.candidate.toJSON());
+                }
+                addCallee();
             });
             // Code for collecting ICE candidates above
 
@@ -179,6 +192,7 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for creating SDP answer below
+            console.log("roomSnapshot.data().offer",roomSnapshot.data().offer);
             const offer = roomSnapshot.data().offer;
             await peerConnection.setRemoteDescription(offer);
             const answer = await peerConnection.createAnswer();
@@ -194,7 +208,8 @@ const CallRoom = ({ currentUser }) => {
             // Code for creating SDP answer above
 
             // Listening for remote ICE candidates below
-            roomRef.collection('callerCandidates').onSnapshot(snapshot => {
+            const callerCandidatesCollection = collection(firestore, "rooms", roomId, "callerCandidates");
+            onSnapshot(callerCandidatesCollection, async snapshot => {
                 snapshot.docChanges().forEach(async change => {
                     if (change.type === 'added') {
                         let data = change.doc.data();
@@ -233,6 +248,9 @@ const CallRoom = ({ currentUser }) => {
             const roomRef = doc(firestore, 'rooms', roomId);
             // if (! there are any other users in call){
             await deleteDoc(roomRef);
+
+
+            // delete candidates to, bc deletion od owner doesn't delete them
             //}
         }
     }
