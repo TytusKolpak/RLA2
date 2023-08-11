@@ -38,12 +38,28 @@ const Home = () => {
         console.log("Created doc:", docRef);
     }
 
+    async function thirdFun() {
+        console.log("got clicked 😁 3");
+        const subColl = "TodaysTestsSub";
+        const collectionName = "TodaysTests";
+        const subCollRef = collection(firestore, collectionName, "KAAhs8LM1LyOANzK8bNo", subColl);
+        const newDoc = {
+            just: "some",
+            template: "data:)"
+        };
+        //await addDoc(collection(firestore, collectionName, "KAAhs8LM1LyOANzK8bNo", subColl), newDoc);
+        await addDoc(subCollRef, newDoc);
+    }
+
+
+
     return (
         <div className="HomePage">
             <h1>Home page</h1>
             <p>This is a Remote Learning App</p>
             <Button onClick={firstFun} disabled>Fire here firstFun</Button>
             <Button onClick={secondFun} disabled>Fire here secondFun</Button>
+            <Button onClick={thirdFun}>Fire here thirdFun</Button>
         </div>
     );
 };

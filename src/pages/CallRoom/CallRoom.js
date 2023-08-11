@@ -50,6 +50,9 @@ const CallRoom = ({ currentUser }) => {
     }
 
     async function createRoom() {
+        // Just a variable declaration for convenience
+        const collectionName = "rooms";
+
         console.log('Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
 
@@ -67,7 +70,7 @@ const CallRoom = ({ currentUser }) => {
         }
 
         // add a new room document to this database, to this collection, with this content
-        const roomRef = await addDoc(collection(firestore, "rooms"), roomWithOffer);
+        const roomRef = await addDoc(collection(firestore, collectionName), roomWithOffer);
         const roomId = roomRef.id; // for this value here
         setRoomId(roomRef.id); // for global accessibility right after room creation (in hang up doc deletion)
         setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
@@ -88,10 +91,10 @@ const CallRoom = ({ currentUser }) => {
         });
         //--
 
-        // create a subcollection in the room document
         // Code for collecting ICE candidates below
-        //                                     database collection document subcollection
-        const callerCandidatesCollection = collection(firestore, "rooms", roomId, "callerCandidates");
+        // Create a subCollection inside currently used room
+        const subCollectionName = "callerCandidates";
+        const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
 
         peerConnection.addEventListener('icecandidate', event => {
             if (!event.candidate) {
@@ -99,12 +102,7 @@ const CallRoom = ({ currentUser }) => {
                 return;
             }
             console.log('Got candidate: ', event.candidate);
-
-            // add a new candidate document to the ICECandidates subcollection
-            async function addCaller() {
-                await addDoc(callerCandidatesCollection, event.candidate.toJSON());
-            }
-            addCaller();
+            callerCandidatesCollection.add(event.candidate.toJSON());
         });
         // Code for collecting ICE candidates above
 
@@ -192,7 +190,7 @@ const CallRoom = ({ currentUser }) => {
             });
 
             // Code for creating SDP answer below
-            console.log("roomSnapshot.data().offer",roomSnapshot.data().offer);
+            console.log("roomSnapshot.data().offer", roomSnapshot.data().offer);
             const offer = roomSnapshot.data().offer;
             await peerConnection.setRemoteDescription(offer);
             const answer = await peerConnection.createAnswer();
@@ -281,9 +279,13 @@ const CallRoom = ({ currentUser }) => {
             <h1>CallRoom of {currentUser.email}</h1>
 
             <div className="mainButtons">
+                {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 0 ? "primary" : "secondary"} onClick={openUserMedia} disabled={mainButtonsState[0]} >Open camera & microphone</Button>
+                {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 1 ? "primary" : "secondary"} onClick={createRoom} disabled={mainButtonsState[1]}>Create room</Button>
+                {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 2 ? "primary" : "secondary"} onClick={joinRoom} disabled={mainButtonsState[2]} >Join room</Button>
+                {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 3 ? "primary" : "secondary"} onClick={hangUp} disabled={mainButtonsState[3]} >Hangup</Button>
             </div>
 

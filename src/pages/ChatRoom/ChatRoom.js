@@ -45,11 +45,13 @@ function ChatRoom({ currentUser }) {
             console.log("I detach listener for new messages received from last recipient");
             unsubscribe();
         })
+        // eslint-disable-next-line
     }, [])
 
     // Only after I assigned a correct value to the currentUserEmail co i find current user's contacts
     useEffect(() => {
         currentUserEmail && findUserContacts();
+        // eslint-disable-next-line
     }, [currentUserEmail])
 
     // Called on startup. Used to populate the left panel with possible message recipients (bound to currently logged user)
@@ -67,6 +69,7 @@ function ChatRoom({ currentUser }) {
     // Only after i have the recipient's email can i show their messages (and scroll down)
     useEffect(() => {
         recipientEmail && displayMessages();
+        // eslint-disable-next-line
     }, [recipientEmail])
 
     useEffect(() => {
@@ -238,8 +241,10 @@ function ChatRoom({ currentUser }) {
                                 type="radio"
                                 name="set1"
                                 // For now it will not work with === instead of ==
+                                // eslint-disable-next-line
                                 variant={radioValue == radio.value ? 'primary' : 'secondary'}
                                 value={radio.value}
+                                // eslint-disable-next-line
                                 checked={radioValue == radio.value}
                                 onChange={(e) => changedContact(e)}>
                                 {radio.name}
