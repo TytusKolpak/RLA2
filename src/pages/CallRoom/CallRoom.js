@@ -6,7 +6,7 @@ import Modal from 'react-bootstrap/Modal';
 
 import { useEffect, useState } from "react";
 
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 
 let peerConnection = null;
 let localStream = null;
@@ -69,6 +69,7 @@ const CallRoom = ({ currentUser }) => {
             }
         }
 
+        // CREATE A ROOM BELOW
         // add a new room document to this database, to this collection, with this content
         const roomRef = await addDoc(collection(firestore, collectionName), roomWithOffer);
         const roomId = roomRef.id; // for this value here
@@ -89,24 +90,26 @@ const CallRoom = ({ currentUser }) => {
                 remoteStream.addTrack(track);
             });
         });
-        //--
+        // CREATE A ROOM ABOVE
 
-        // Code for collecting ICE candidates below
+        // CODE FOR COLLECTING ICE CANDIDATES BELOW
         // Create a subCollection inside currently used room
         const subCollectionName = "callerCandidates";
         const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
 
-        peerConnection.addEventListener('icecandidate', event => {
+        peerConnection.addEventListener('icecandidate', async event => {
             if (!event.candidate) {
                 console.log('Got final candidate!');
                 return;
             }
             console.log('Got candidate: ', event.candidate);
-            callerCandidatesCollection.add(event.candidate.toJSON());
-        });
-        // Code for collecting ICE candidates above
 
-        // Listening for remote session description below
+            // Add a document to this (sub)collection 
+            await addDoc(callerCandidatesCollection, event.candidate.toJSON());
+        });
+        // CODE FOR COLLECTING ICE CANDIDATES ABOVE
+
+        // LISTENING FOR REMOTE SESSION DESCRIPTION BELOW
         unsubscribe = onSnapshot(roomRef, async snapshot => {
 
             // When we hang up it enters here and tries to access null data (bc we delete we could check if the change is deletion, but it does the same thing as this if)
@@ -120,10 +123,11 @@ const CallRoom = ({ currentUser }) => {
                 }
             }
         });
-        // Listening for remote session description above
+        // LISTENING FOR REMOTE SESSION DESCRIPTION ABOVE
 
-        // Listen for remote ICE candidates below
-        const calleeCandidatesCollection = collection(firestore, "rooms", roomId, "calleeCandidates");
+        // LISTEN FOR REMOTE ICE CANDIDATES BELOW
+        const subCollection2Name = "calleeCandidates";
+        const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
         onSnapshot(calleeCandidatesCollection, async snapshot => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
@@ -133,7 +137,7 @@ const CallRoom = ({ currentUser }) => {
                 }
             });
         });
-        // Listen for remote ICE candidates above
+        // LISTEN FOR REMOTE ICE CANDIDATES ABOVE
     }
 
     // This is called when user clicks Join room button on the screen
@@ -150,6 +154,9 @@ const CallRoom = ({ currentUser }) => {
     }
 
     async function joinRoomById(roomId) {
+        // Just a variable declaration for convenience
+        const collectionName = "rooms";
+
         console.log("join room by id:", roomId);
         const roomRef = doc(firestore, 'rooms', roomId)
         const roomSnapshot = await getDoc(roomRef);
@@ -163,8 +170,9 @@ const CallRoom = ({ currentUser }) => {
                 peerConnection.addTrack(track, localStream);
             });
 
-            // Code for collecting ICE candidates below
-            const calleeCandidatesCollection = collection(firestore, "rooms", roomId, "calleeCandidates");
+            // CODE FOR COLLECTING ICE CANDIDATES BELOW
+            const subCollection2Name = "calleeCandidates";
+            const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
 
             peerConnection.addEventListener('icecandidate', event => {
                 if (!event.candidate) {
@@ -179,7 +187,7 @@ const CallRoom = ({ currentUser }) => {
                 }
                 addCallee();
             });
-            // Code for collecting ICE candidates above
+            // CODE FOR COLLECTING ICE CANDIDATES ABOVE
 
             peerConnection.addEventListener('track', event => {
                 console.log('Got remote track:', event.streams[0]);
@@ -189,7 +197,7 @@ const CallRoom = ({ currentUser }) => {
                 });
             });
 
-            // Code for creating SDP answer below
+            // CODE FOR CREATING SDP ANSWER BELOW
             console.log("roomSnapshot.data().offer", roomSnapshot.data().offer);
             const offer = roomSnapshot.data().offer;
             await peerConnection.setRemoteDescription(offer);
@@ -203,10 +211,11 @@ const CallRoom = ({ currentUser }) => {
                 }
             }
             await updateDoc(roomRef, roomWithAnswer)
-            // Code for creating SDP answer above
+            // CODE FOR CREATING SDP ANSWER ABOVE
 
-            // Listening for remote ICE candidates below
-            const callerCandidatesCollection = collection(firestore, "rooms", roomId, "callerCandidates");
+            // LISTENING FOR REMOTE ICE CANDIDATES BELOW
+            const subCollectionName = "callerCandidates";
+            const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
             onSnapshot(callerCandidatesCollection, async snapshot => {
                 snapshot.docChanges().forEach(async change => {
                     if (change.type === 'added') {
@@ -216,7 +225,7 @@ const CallRoom = ({ currentUser }) => {
                     }
                 });
             });
-            // Listening for remote ICE candidates above
+            // LISTENING FOR REMOTE ICE CANDIDATES ABOVE
         }
     }
 
@@ -243,13 +252,19 @@ const CallRoom = ({ currentUser }) => {
 
         // Delete room on hangup
         if (roomId) {
-            const roomRef = doc(firestore, 'rooms', roomId);
-            // if (! there are any other users in call){
+            const collectionName = "rooms";
+            const roomRef = doc(firestore, collectionName, roomId);
             await deleteDoc(roomRef);
 
+            const querySnapshotCaller = await getDocs(collection(firestore, collectionName, roomId, "callerCandidates"));
+            querySnapshotCaller.forEach((doc) => {
+                deleteDoc(doc);
+            });
 
-            // delete candidates to, bc deletion od owner doesn't delete them
-            //}
+            const querySnapshotCallee = await getDocs(collection(firestore, collectionName, roomId, "calleeCandidates"));
+            querySnapshotCallee.forEach((doc) => {
+                deleteDoc(doc);
+            });
         }
     }
 

@@ -47,7 +47,6 @@ const Home = () => {
             just: "some",
             template: "data:)"
         };
-        //await addDoc(collection(firestore, collectionName, "KAAhs8LM1LyOANzK8bNo", subColl), newDoc);
         await addDoc(subCollRef, newDoc);
     }
 
@@ -59,7 +58,7 @@ const Home = () => {
             <p>This is a Remote Learning App</p>
             <Button onClick={firstFun} disabled>Fire here firstFun</Button>
             <Button onClick={secondFun} disabled>Fire here secondFun</Button>
-            <Button onClick={thirdFun}>Fire here thirdFun</Button>
+            <Button onClick={thirdFun} disabled>Fire here thirdFun</Button>
         </div>
     );
 };
