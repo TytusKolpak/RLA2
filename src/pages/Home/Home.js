@@ -1,10 +1,49 @@
+import { Button } from "react-bootstrap";
 import "./Home.css"
 
+import { useEffect } from "react";
+
+// Database related
+import { firestore } from '../../firebase_setup/firebase';
+import { addDoc, collection } from 'firebase/firestore';
+
 const Home = () => {
+
+    useEffect(() => {
+        console.log("I fire once");
+
+    }, [])
+
+    async function firstFun() {
+        console.log("got clicked 😁");
+        const collectionName = "TodaysTests";
+        const document = {
+            day: "friday",
+            pomodoros: 4,
+            current: 1
+        }
+        const docRef = await addDoc(collection(firestore, collectionName), document);
+        console.log("Created doc:", docRef);
+    }
+
+    async function secondFun() {
+        console.log("got clicked 😁 2");
+        const subColl = "TodaysTestsSub";
+        const collectionName = "TodaysTests";
+        const document = {
+            goodDay: true,
+            stars: 5
+        }
+        const docRef = await addDoc(collection(firestore, collectionName, "KAAhs8LM1LyOANzK8bNo", subColl), document);
+        console.log("Created doc:", docRef);
+    }
+
     return (
         <div className="HomePage">
             <h1>Home page</h1>
             <p>This is a Remote Learning App</p>
+            <Button onClick={firstFun} disabled>Fire here firstFun</Button>
+            <Button onClick={secondFun} disabled>Fire here secondFun</Button>
         </div>
     );
 };
