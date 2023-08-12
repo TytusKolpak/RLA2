@@ -52,12 +52,12 @@ const CallRoom = ({ currentUser }) => {
 
     // Checking order of operations
     async function createRoom() {
-        console.log("1. Creating a room");
+        console.log("Creating a room");
         const collectionName = "rooms";
         const roomRef = await addDoc(collection(firestore, collectionName), {});
         const roomId = roomRef.id;
 
-        console.log('2. Create PeerConnection with configuration: ', configuration);
+        console.log('Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
 
         registerPeerConnectionListeners();
@@ -71,19 +71,19 @@ const CallRoom = ({ currentUser }) => {
         // Create a subCollection inside currently used room
         const subCollectionName = "callerCandidates";
         const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
-        console.log("3. Created a callerCandidatesCollection reference:", callerCandidatesCollection);
+        console.log("Created a callerCandidatesCollection reference:", callerCandidatesCollection);
 
-        console.log("4. Adding event Listener \"icecandidate\" to peerConnection:", peerConnection);
+        console.log("Adding event Listener \"icecandidate\" to peerConnection:", peerConnection);
         // this will fire when a new ice candidate will be gathered
         peerConnection.addEventListener('icecandidate', async event => {
             if (!event.candidate) {
-                console.log('0. Got final candidate!');
+                console.log('Got final candidate!');
                 return;
             }
-            console.log('1. Got candidate: ', event.candidate);
+            // console.log('Got candidate: ', event.candidate);
+            console.log('Got candidate');
 
             // Add a document to this (sub)collection 
-            console.log("2. Adding a document to the callerCandidatesCollection:", event.candidate.toJSON());
             await addDoc(callerCandidatesCollection, event.candidate.toJSON());
         });
         // CODE FOR COLLECTING ICE CANDIDATES ABOVE
@@ -91,7 +91,7 @@ const CallRoom = ({ currentUser }) => {
         // CREATE A ROOM BELOW
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        console.log('5. Created offer:', offer);
+        console.log('Created offer:', offer);
 
         const roomWithOffer = {
             offer: {
@@ -108,23 +108,24 @@ const CallRoom = ({ currentUser }) => {
         //CREATE A ROOM ABOVE
 
         // Will be triggered each time a new track becomes available
-        console.log("6. Adding event Listener \"track\" to peerConnection:", peerConnection);
+        console.log("Adding event Listener \"track\" to peerConnection:", peerConnection);
         peerConnection.addEventListener('track', event => {
-            console.log('Got remote track:', event.streams[0]);
+            // console.log('Got remote track:', event.streams[0]);
             event.streams[0].getTracks().forEach(track => {
-                console.log('Add a track to the remoteStream:', track);
+                // console.log('Add a track to the remoteStream:', track);
+                console.log("Adding a track");
                 remoteStream.addTrack(track);
             });
         });
 
         // LISTENING FOR REMOTE SESSION DESCRIPTION BELOW
-        console.log("7. Listening for remote session description");
+        console.log("Listening for remote session description");
         unsubscribe = onSnapshot(roomRef, async snapshot => {
             if (snapshot.data()) {
-                console.log('1. Got updated room:', snapshot.data());
+                console.log('Got updated room:', snapshot.data());
                 const data = snapshot.data();
                 if (!peerConnection.currentRemoteDescription && data.answer) {
-                    console.log('2. Set remote description: ', data.answer);
+                    console.log('Set remote description: ', data.answer);
                     const answer = new RTCSessionDescription(data.answer)
                     await peerConnection.setRemoteDescription(answer);
                 }
@@ -133,7 +134,7 @@ const CallRoom = ({ currentUser }) => {
         // LISTENING FOR REMOTE SESSION DESCRIPTION ABOVE
 
         // LISTEN FOR REMOTE ICE CANDIDATES BELOW
-        console.log("8. Listening for remote ice candidates");
+        console.log("Listening for remote ice candidates");
         const subCollection2Name = "calleeCandidates";
         const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
         onSnapshot(calleeCandidatesCollection, async snapshot => {
@@ -238,7 +239,7 @@ const CallRoom = ({ currentUser }) => {
     }
 
     async function hangUp(e) {
-        console.log("1. Hanging up");
+        console.log("Hanging up");
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
             track.stop();
@@ -261,28 +262,34 @@ const CallRoom = ({ currentUser }) => {
 
         // Delete room on hangup
         if (roomId) {
-            console.log("2. Deleting the contents of room with ID:", roomId);
-            const collectionName = "rooms";
-            const roomRef = doc(firestore, collectionName, roomId);
+            console.log("Deleting the contents of room with ID:", roomId);
 
-            const querySnapshotCaller = await getDocs(collection(firestore, collectionName, roomId, "callerCandidates"));
-            querySnapshotCaller.forEach((doc) => {
-                deleteDoc(doc);
-            });
+            try {
+                const querySnapshotCallee = await getDocs(collection(firestore, "rooms", roomId, "calleeCandidates"));
+                querySnapshotCallee.forEach(async (doc) => {
+                    await deleteDoc(doc.ref);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
 
-            const querySnapshotCallee = await getDocs(collection(firestore, collectionName, roomId, "calleeCandidates"));
-            querySnapshotCallee.forEach((doc) => {
-                deleteDoc(doc);
-            });
+            try {
+                const querySnapshotCaller = await getDocs(collection(firestore, "rooms", roomId, "callerCandidates"));
+                querySnapshotCaller.forEach(async (doc) => {
+                    await deleteDoc(doc.ref);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
 
+            const roomRef = doc(firestore, "rooms", roomId);
             await deleteDoc(roomRef);
         }
     }
 
     function registerPeerConnectionListeners() {
         peerConnection.addEventListener('icegatheringstatechange', () => {
-            console.log(
-                `ICE gathering state changed: ${peerConnection.iceGatheringState}`);
+            console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
         });
 
         peerConnection.addEventListener('connectionstatechange', () => {
@@ -294,8 +301,7 @@ const CallRoom = ({ currentUser }) => {
         });
 
         peerConnection.addEventListener('iceconnectionstatechange ', () => {
-            console.log(
-                `ICE connection state change: ${peerConnection.iceConnectionState}`);
+            console.log(`ICE connection state change: ${peerConnection.iceConnectionState}`);
         });
     }
 
