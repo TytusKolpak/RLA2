@@ -12,6 +12,17 @@ let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
 var unsubscribe = function () { }; // initializing a function to make it global
+const configuration = {
+    iceServers: [
+        {
+            urls: [
+                'stun:stun1.l.google.com:19302',
+                'stun:stun2.l.google.com:19302',
+            ],
+        },
+    ],
+    iceCandidatePoolSize: 10,
+};
 
 const CallRoom = ({ currentUser }) => {
     const [showModal, setShowModal] = useState(false);
@@ -23,24 +34,14 @@ const CallRoom = ({ currentUser }) => {
     useEffect(() => {
         return unsubscribe();
     }, [])
-    const configuration = {
-        iceServers: [
-            {
-                urls: [
-                    'stun:stun1.l.google.com:19302',
-                    'stun:stun2.l.google.com:19302',
-                ],
-            },
-        ],
-        iceCandidatePoolSize: 10,
-    };
 
+    // Checked, OK
     async function openUserMedia(e) {
+        console.log("Opening user media");
         setCreateRoomBtnDisabled([true, false, false, false]);
         setPrimaryMainButton(1);
 
-        const stream = await navigator.mediaDevices.getUserMedia(
-            { video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         document.querySelector('#localVideo').srcObject = stream;
         localStream = stream;
         remoteStream = new MediaStream();
@@ -49,18 +50,48 @@ const CallRoom = ({ currentUser }) => {
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
     }
 
+    // Checking order of operations
     async function createRoom() {
-        // Just a variable declaration for convenience
+        console.log("1. Creating a room");
         const collectionName = "rooms";
+        const roomRef = await addDoc(collection(firestore, collectionName), {});
+        const roomId = roomRef.id;
 
-        console.log('Create PeerConnection with configuration: ', configuration);
+        console.log('2. Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
 
         registerPeerConnectionListeners();
 
-        //--
+        // That's for registering audio and video
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // CODE FOR COLLECTING ICE CANDIDATES BELOW
+        // Create a subCollection inside currently used room
+        const subCollectionName = "callerCandidates";
+        const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
+        console.log("3. Created a callerCandidatesCollection reference:", callerCandidatesCollection);
+
+        console.log("4. Adding event Listener \"icecandidate\" to peerConnection:", peerConnection);
+        // this will fire when a new ice candidate will be gathered
+        peerConnection.addEventListener('icecandidate', async event => {
+            if (!event.candidate) {
+                console.log('0. Got final candidate!');
+                return;
+            }
+            console.log('1. Got candidate: ', event.candidate);
+
+            // Add a document to this (sub)collection 
+            console.log("2. Adding a document to the callerCandidatesCollection:", event.candidate.toJSON());
+            await addDoc(callerCandidatesCollection, event.candidate.toJSON());
+        });
+        // CODE FOR COLLECTING ICE CANDIDATES ABOVE
+
+        // CREATE A ROOM BELOW
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
+        console.log('5. Created offer:', offer);
 
         const roomWithOffer = {
             offer: {
@@ -69,20 +100,15 @@ const CallRoom = ({ currentUser }) => {
             }
         }
 
-        // CREATE A ROOM BELOW
+        await updateDoc(roomRef, roomWithOffer);
+
         // add a new room document to this database, to this collection, with this content
-        const roomRef = await addDoc(collection(firestore, collectionName), roomWithOffer);
-        const roomId = roomRef.id; // for this value here
         setRoomId(roomRef.id); // for global accessibility right after room creation (in hang up doc deletion)
         setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
+        //CREATE A ROOM ABOVE
 
-        //idk what this does
-        console.log(localStream);
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
-
-        //idk what this does
+        // Will be triggered each time a new track becomes available
+        console.log("6. Adding event Listener \"track\" to peerConnection:", peerConnection);
         peerConnection.addEventListener('track', event => {
             console.log('Got remote track:', event.streams[0]);
             event.streams[0].getTracks().forEach(track => {
@@ -90,34 +116,15 @@ const CallRoom = ({ currentUser }) => {
                 remoteStream.addTrack(track);
             });
         });
-        // CREATE A ROOM ABOVE
-
-        // CODE FOR COLLECTING ICE CANDIDATES BELOW
-        // Create a subCollection inside currently used room
-        const subCollectionName = "callerCandidates";
-        const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
-
-        peerConnection.addEventListener('icecandidate', async event => {
-            if (!event.candidate) {
-                console.log('Got final candidate!');
-                return;
-            }
-            console.log('Got candidate: ', event.candidate);
-
-            // Add a document to this (sub)collection 
-            await addDoc(callerCandidatesCollection, event.candidate.toJSON());
-        });
-        // CODE FOR COLLECTING ICE CANDIDATES ABOVE
 
         // LISTENING FOR REMOTE SESSION DESCRIPTION BELOW
+        console.log("7. Listening for remote session description");
         unsubscribe = onSnapshot(roomRef, async snapshot => {
-
-            // When we hang up it enters here and tries to access null data (bc we delete we could check if the change is deletion, but it does the same thing as this if)
             if (snapshot.data()) {
-                console.log('Got updated room:', snapshot.data());
+                console.log('1. Got updated room:', snapshot.data());
                 const data = snapshot.data();
                 if (!peerConnection.currentRemoteDescription && data.answer) {
-                    console.log('Set remote description: ', data.answer);
+                    console.log('2. Set remote description: ', data.answer);
                     const answer = new RTCSessionDescription(data.answer)
                     await peerConnection.setRemoteDescription(answer);
                 }
@@ -126,6 +133,7 @@ const CallRoom = ({ currentUser }) => {
         // LISTENING FOR REMOTE SESSION DESCRIPTION ABOVE
 
         // LISTEN FOR REMOTE ICE CANDIDATES BELOW
+        console.log("8. Listening for remote ice candidates");
         const subCollection2Name = "calleeCandidates";
         const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
         onSnapshot(calleeCandidatesCollection, async snapshot => {
@@ -230,6 +238,7 @@ const CallRoom = ({ currentUser }) => {
     }
 
     async function hangUp(e) {
+        console.log("1. Hanging up");
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
             track.stop();
@@ -252,9 +261,9 @@ const CallRoom = ({ currentUser }) => {
 
         // Delete room on hangup
         if (roomId) {
+            console.log("2. Deleting the contents of room with ID:", roomId);
             const collectionName = "rooms";
             const roomRef = doc(firestore, collectionName, roomId);
-            await deleteDoc(roomRef);
 
             const querySnapshotCaller = await getDocs(collection(firestore, collectionName, roomId, "callerCandidates"));
             querySnapshotCaller.forEach((doc) => {
@@ -265,6 +274,8 @@ const CallRoom = ({ currentUser }) => {
             querySnapshotCallee.forEach((doc) => {
                 deleteDoc(doc);
             });
+
+            await deleteDoc(roomRef);
         }
     }
 
