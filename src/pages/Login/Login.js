@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 
 import "../Login/Login.css"
 
-
 const Login = ({currentUser}) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [email, setEmail] = useState('');
@@ -64,8 +63,8 @@ const Login = ({currentUser}) => {
     }
 
 
-    return (<div className="Login"><h1>Login page</h1>
-        <Form onSubmit={handleFormSubmit}>
+    return (<div id="Login"><h1>Login page</h1>
+        <Form className="wider" onSubmit={handleFormSubmit}>
             <Form.Group className="mb-3" controlId="formBasicEmail">
                 <Form.Label >Email address</Form.Label>
                 <Form.Control
@@ -92,7 +91,7 @@ const Login = ({currentUser}) => {
                     <>
                         <Button variant='secondary' onClick={mySignOut}>Log out</Button>
                         {/* Get content of the email without anything after @, including @ */}
-                        <p>Hi {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</p>
+                        <h3 className="greeting">You are logged in as: <br></br>{currentUser.email.substring(0, currentUser.email.indexOf('@'))}</h3>
                     </>
                     :
                     <Button variant='primary' type="submit">Log in</Button>

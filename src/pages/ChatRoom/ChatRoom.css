@@ -22,9 +22,22 @@ p {
     font-size: large;
 }
 
-#leftPanel{
+#leftPanel,
+.newContact {
     width: 250px;
 }
+
+#leftPanel {
+    #contacts {
+        margin-top: 25px;
+    }
+
+    .warning {
+        color: red;
+        transition: opacity 1s ease-in-out; /* Apply a 1-second fade-out transition */
+    }
+}
+
 
 /* The one with the chat inside */
 #middlePanel {
@@ -55,13 +68,13 @@ p {
             margin-left: 5px;
         }
 
-        .timeDisplay{
+        .timeDisplay {
             font-size: small;
         }
     }
 }
 
-.timeDisplay{
+.timeDisplay {
     margin: 0;
     padding: 0;
 }
@@ -73,11 +86,12 @@ div.recipient .textDisplay {
 div.sender .textDisplay {
     background-color: rgba(137, 184, 255, 0.685);
 }
+
 @media (prefers-color-scheme: dark) {
     div.recipient .textDisplay {
         background-color: rgba(85, 85, 85, 0.7);
     }
-    
+
     div.sender .textDisplay {
         background-color: rgba(0, 0, 255, 0.5);
     }

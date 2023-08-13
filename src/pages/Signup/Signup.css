@@ -1,7 +1,16 @@
-#Signup{
+#Signup {
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+
+    .wider {
+        width: 300px;
+    }
+
+    .greeting {
+        text-align: center;
+        color: rgb(0, 192, 0);
+    }
 }

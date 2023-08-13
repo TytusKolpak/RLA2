@@ -10,10 +10,12 @@ import { useEffect, useState } from 'react';
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, or, and, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, or, and, limit, onSnapshot, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 
 // for getting auth on reload
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+
 
 // (Get user state from different file as an argument (from App.js)
 // but we also need it on reload
@@ -29,9 +31,11 @@ function ChatRoom({ currentUser }) {
     const [radioValue, setRadioValue] = useState(0);
     const [radios, setRadios] = useState([]);
     const [recipientEmail, setRecipientEmail] = useState('')
+    const [newContact, setNewContact] = useState('')
+    const [newContactExist, setNewContactExist] = useState(true)
 
 
-    const collectionName = "testMessages";
+
     // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact, also user on reload since we don't get currentUser form ChatRoom argument anymore. Also scroll down to the bottom of the messages div.
     useEffect(() => {
         console.log("Initializing user email");
@@ -92,6 +96,63 @@ function ChatRoom({ currentUser }) {
         setInputtedMessage('')
     }
 
+    // What happens when user clicks Add button (for a new contact)
+    function handleNewContactSubmit(e) {
+        console.log("handleNewContactSubmit");
+        e.preventDefault();
+
+        // Create a document in the Contacts Collection
+        addContact();
+
+        // Clear input field
+        setNewContact('')
+    }
+
+    async function addContact() {
+        try {
+
+            var exists = false;
+            // Find an user with has been inputted
+            const q = query(collection(firestore, "Contacts"), where("ownerAddress", "==", newContact));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                console.log(doc.id, " => ", doc.data());
+                exists = true;
+            });
+
+            if (exists) {
+                console.log("Adding a contact to current user");
+                const collectionRef = collection(firestore, "Contacts");
+
+                // Create a query against the collection.
+                const q = query(collectionRef, where("ownerAddress", "==", currentUserEmail));
+                const querySnapshot = await getDocs(q);
+
+                querySnapshot.forEach(async docRef => {
+                    // Atomically add a new contact to the "contacts" array field.
+                    const singleDocRef = doc(firestore, "Contacts", docRef.id);
+                    await updateDoc(singleDocRef, {
+                        contacts: arrayUnion(newContact)
+                    });
+
+                    console.log("length", radios.length);
+                    //update radios
+                    setRadios((radios) => [...radios, { name: newContact, value: radios.length }])
+                    setRadioValue(radios.length)
+                });
+            } else {
+                setNewContactExist(false)
+                // Turn off the visibility after 5 seconds
+                setTimeout(() => {
+                    setNewContactExist(true)
+                }, 5000);
+            }
+
+        } catch (e) {
+            console.error("Error adding document: ", e);
+        }
+    }
+
     // Scroll down
     function scrollDown() {
         console.log("Scrolling down");
@@ -106,6 +167,7 @@ function ChatRoom({ currentUser }) {
     // Function for displaying messages of specified user. Has to be async since it uses await getDocs. 
     async function displayMessages() {
         console.log("Displaying Messages");
+        const collectionName = "testMessages";
 
         // Create a reference to the cities collection
         const collectionRef = collection(firestore, collectionName);
@@ -166,6 +228,7 @@ function ChatRoom({ currentUser }) {
     async function createMessageDoc() {
         try {
             console.log("Creating a message document");
+            const collectionName = "testMessages";
             const document = {
                 messageText: inputtedMessage,
                 sender: currentUserEmail, // this might need to change
@@ -226,10 +289,30 @@ function ChatRoom({ currentUser }) {
         unsubscribe();
     }
 
+
+
     return (
         <div className='chatRoom'>
             <div id='leftPanel' className='panel'>
                 <h2>Contacts</h2>
+                <div className='newContact'>
+                    <Form onSubmit={handleNewContactSubmit}>
+                        <Form.Group className="mb-3" controlId="formBasicEmail">
+                            <Form.Control
+                                type="email"
+                                placeholder="Enter email"
+                                value={newContact}
+                                onChange={e => setNewContact(e.target.value)}
+                            />
+                        </Form.Group>
+                        <Button variant="primary" type="submit">
+                            Add
+                        </Button>
+                    </Form>
+
+                    {!newContactExist && <h5 className='warning'>Specified user's email doesn't exist</h5>}
+
+                </div>
                 <div id='contacts'>
                     <ButtonGroup vertical='true'>
 
@@ -270,8 +353,8 @@ function ChatRoom({ currentUser }) {
 
                 <Form id='messageInput' onSubmit={handleFormSubmit}>
                     <Form.Group className="mb-3" >
-                        <Form.Label >Message</Form.Label>
                         <Form.Control
+                            placeholder="Enter message"
                             value={inputtedMessage}
                             onChange={e => setInputtedMessage(e.target.value)}
                         />

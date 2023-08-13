@@ -1,12 +1,22 @@
-.Login{
+#Login {
     height: 100%;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+
+    .greeting {
+        color: rgb(0, 192, 0);
+        text-align: center;
+    }
+
+    .wider {
+        width: 300px;
+    }
 }
 
-h4{
+/* If you put an element selector inside a parent selector like those above - it doesn't work */
+#Login h4 {
     color: red;
 }
