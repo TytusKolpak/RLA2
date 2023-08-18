@@ -300,7 +300,7 @@ function ChatRoom({ currentUser }) {
                         <Form.Group className="mb-3" controlId="formBasicEmail">
                             <Form.Control
                                 type="email"
-                                placeholder="Enter email"
+                                placeholder="Enter email for new contact"
                                 value={newContact}
                                 onChange={e => setNewContact(e.target.value)}
                             />
