@@ -18,7 +18,7 @@ function FilesRoom({ currentUser }) {
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
     const [downloaded, setDownloaded] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [itemNames, setItemNames] = useState([]);
+    const [itemList, setItemList] = useState([]);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -26,19 +26,28 @@ function FilesRoom({ currentUser }) {
             setCurrentUserEmail(user.email);
         });
 
-        const listRef = ref(storage, 'uploadedImages');
-        listAll(listRef)
-            .then((res) => {
-                const names = res.items.map((itemRef) => itemRef.fullPath);
-                setItemNames(names);
-            })
-            .catch((error) => {
-                console.log("Uh-oh, an error occurred!", error);
-            });
+        displayItems();
 
         // eslint-disable-next-line
     }, [])
 
+    function displayItems() {
+        const listRef = ref(storage, 'uploadedImages');
+        listAll(listRef)
+            .then(async (res) => {
+                const items = await Promise.all(res.items.map(async (itemRef) => {
+                    const downloadUrl = await getDownloadURL(itemRef);
+                    return {
+                        name: itemRef.name,
+                        downloadUrl
+                    };
+                }));
+                setItemList(items);
+            })
+            .catch((error) => {
+                console.log("Uh-oh, an error occurred!", error);
+            });
+    }
     async function downloadImage() {
         try {
             console.log("Downloading and displaying the image");
@@ -80,6 +89,8 @@ function FilesRoom({ currentUser }) {
             .catch((error) => {
                 console.error('Error uploading file:', error);
             });
+
+        // displayItems(); somehow it should rerender the list
     };
 
     return (
@@ -111,8 +122,12 @@ function FilesRoom({ currentUser }) {
                 <div className='displaying'>
                     <h4>Displaying</h4>
                     <ListGroup>
-                        {itemNames.map((itemName, index) => (
-                            <ListGroupItem key={index}>{itemName}</ListGroupItem>
+                        {itemList.map((item, index) => (
+                            <ListGroupItem key={index}>
+                                <a href={item.downloadUrl} download={item.name}>
+                                    {item.name}
+                                </a>
+                            </ListGroupItem>
                         ))}
                     </ListGroup>
                 </div>
