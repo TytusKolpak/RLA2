@@ -30,6 +30,8 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
+    const [localVideoVisible, setLocalVideoVisible] = useState(false)
+    const [remoteVideoVisible, setRemoteVideoVisible] = useState(false)
 
     useEffect(() => {
         return unsubscribe();
@@ -48,6 +50,7 @@ const CallRoom = ({ currentUser }) => {
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
+        setLocalVideoVisible(true);
     }
 
     // Checking order of operations
@@ -199,6 +202,8 @@ const CallRoom = ({ currentUser }) => {
             // CODE FOR COLLECTING ICE CANDIDATES ABOVE
 
             peerConnection.addEventListener('track', event => {
+                console.log("We get a remote connection");
+                setRemoteVideoVisible(true);
                 console.log('Got remote track:', event.streams[0]);
                 event.streams[0].getTracks().forEach(track => {
                     console.log('Add a track to the remoteStream:', track);
@@ -240,6 +245,9 @@ const CallRoom = ({ currentUser }) => {
 
     async function hangUp(e) {
         console.log("Hanging up");
+        setRemoteVideoVisible(false);
+        setLocalVideoVisible(false);
+
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
             track.stop();
@@ -326,8 +334,14 @@ const CallRoom = ({ currentUser }) => {
             </div>
 
             <div id="videos">
-                <video id="localVideo" muted autoPlay playsInline></video>
+                <div>
+                    {localVideoVisible && <h4 className="center"> That's you</h4>}
+                    <video id="localVideo" muted autoPlay playsInline></video>
+                </div>
+                <div>
+                    {remoteVideoVisible && <h4 className="center"> That's them</h4>}
                 <video id="remoteVideo" autoPlay playsInline></video>
+                </div>
             </div>
 
             <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>

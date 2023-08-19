@@ -7,6 +7,9 @@
     top: 40px;
 }
 
-div.container a{
-    font-size: 3rem;
+/* touchscreens */
+@media (hover: none) {
+    div.container a {
+        font-size: 2rem;
+    }
 }
