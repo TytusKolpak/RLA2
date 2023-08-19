@@ -3,10 +3,8 @@ import "./Home.css"
 import { useEffect, useState } from "react";
 
 import { storage } from "../../firebase_setup/firebase";
-import { ref, getDownloadURL } from "firebase/storage";
+import { ref, getDownloadURL, uploadBytes } from "firebase/storage";
 import { Button } from "react-bootstrap";
-
-
 
 const Home = () => {
     const [downloaded, setDownloaded] = useState(false);
@@ -42,6 +40,16 @@ const Home = () => {
         }
     }
 
+    function uploadImage() {
+        const selectedFile = document.getElementById("input").files[0];
+
+        // Create a reference to 'images/mountains.jpg'
+        const storageRef = ref(storage, 'uploadedImages');
+        // 'file' comes from the Blob or File API
+        uploadBytes(storageRef, selectedFile).then((snapshot) => {
+            console.log('Uploaded a blob or file!');
+        });
+    }
 
     return (
         <div className="HomePage">
@@ -53,7 +61,8 @@ const Home = () => {
                 Download space img
             </Button>
             <img id="myimg" alt="No img here"></img>
-            <Button>Upload</Button>
+            <Button onClick={uploadImage}>Upload</Button>
+            <input type="file" id="input" multiple />
         </div>
     );
 };
