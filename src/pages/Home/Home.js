@@ -30,8 +30,12 @@ const Home = () => {
                 xhr.responseType = 'blob';
                 xhr.onload = (event) => {
                     const blob = xhr.response;
-                    console.log("event:",event);
-                    console.log("blob:",blob);
+                    const blobUrl = URL.createObjectURL(blob); // Create a URL for the blob
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = 'downloaded_image.jpg'; // Specify the desired filename for the downloaded image
+                    link.click();
+                    URL.revokeObjectURL(blobUrl); // Clean up the URL after use
                 };
                 xhr.open('GET', url);
                 xhr.send();
