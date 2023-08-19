@@ -21,6 +21,7 @@ const Layout = ({ currentUser }) => {
                     <Link to="/signup">Signup</Link>
                     {currentUser && <Link to="/chatRoom">ChatRoom</Link>}
                     {currentUser && <Link to="/callRoom">CallRoom</Link>}
+                    {currentUser && <Link to="/filesRoom">FilesRoom</Link>}
                 </Container>
             </Navbar >
 

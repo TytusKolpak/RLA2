@@ -8,6 +8,7 @@ import Signup from "../pages/Signup/Signup";
 import NoPage from "../pages/NoPage/NoPage";
 import ChatRoom from "../pages/ChatRoom/ChatRoom";
 import CallRoom from '../pages/CallRoom/CallRoom';
+import FilesRoom from '../pages/FilesRoom/FilesRoom';
 
 import { useState, useEffect } from 'react';
 
@@ -39,6 +40,7 @@ function App() {
                         <Route path="signup" element={<Signup />} />
                         <Route path="chatRoom" element={<ChatRoom currentUser={currentUser} />} />
                         <Route path="callRoom" element={<CallRoom currentUser={currentUser} />} />
+                        <Route path="filesRoom" element={<FilesRoom currentUser={currentUser} />} />
 
                         {/* The path="*" specifies that any uncovered path will lead to this element */}
                         <Route path="*" element={<NoPage />} />

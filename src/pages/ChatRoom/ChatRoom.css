@@ -16,10 +16,17 @@
 }
 
 p {
-    border-radius: 0.5rem;
     margin-bottom: 1rem;
     padding: 0.5rem;
     font-size: large;
+}
+
+.sender p {
+    border-radius: 0.5rem 0.5rem 0 0.5rem;
+}
+
+.recipient p {
+    border-radius: 0.5rem 0.5rem 0.5rem 0;
 }
 
 #leftPanel,
@@ -34,7 +41,8 @@ p {
 
     .warning {
         color: red;
-        transition: opacity 1s ease-in-out; /* Apply a 1-second fade-out transition */
+        transition: opacity 1s ease-in-out;
+        /* Apply a 1-second fade-out transition */
     }
 }
 
@@ -89,10 +97,10 @@ div.sender .textDisplay {
 
 @media (prefers-color-scheme: dark) {
     div.recipient .textDisplay {
-        background-color: rgba(85, 85, 85, 0.7);
+        background-color: rgb(108, 117, 125);
     }
 
     div.sender .textDisplay {
-        background-color: rgba(0, 0, 255, 0.5);
+        background-color: rgb(11, 94, 216);
     }
 }
