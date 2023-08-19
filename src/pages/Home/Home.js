@@ -1,6 +1,6 @@
 import "./Home.css"
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { storage } from "../../firebase_setup/firebase";
 import { ref, getDownloadURL } from "firebase/storage";
@@ -9,52 +9,51 @@ import { Button } from "react-bootstrap";
 
 
 const Home = () => {
+    const [downloaded, setDownloaded] = useState(false);
 
     useEffect(() => {
         console.log("I fire once")
     }, [])
 
-    function downloadImage() {
-        console.log("Downloading and displaying the image :D");
-        // Child references can also take paths delimited by '/'
-        const spaceRef = ref(storage, 'images/space.jpg');
-        // spaceRef now points to "images/space.jpg"
-        // imagesRef still points to "images"
+    async function downloadImage() {
+        try {
+            console.log("Downloading and displaying the image");
+            const spaceRef = ref(storage, 'images/space.jpg');
+            const url = await getDownloadURL(spaceRef);
 
-        getDownloadURL(spaceRef)
-            .then((url) => {
-                console.log("url:",url);
+            // Download the image using fetch
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
 
-                // This can be downloaded directly:
-                const xhr = new XMLHttpRequest();
-                xhr.responseType = 'blob';
-                xhr.onload = (event) => {
-                    const blob = xhr.response;
-                    const blobUrl = URL.createObjectURL(blob); // Create a URL for the blob
-                    const link = document.createElement('a');
-                    link.href = blobUrl;
-                    link.download = 'downloaded_image.jpg'; // Specify the desired filename for the downloaded image
-                    link.click();
-                    URL.revokeObjectURL(blobUrl); // Clean up the URL after use
-                };
-                xhr.open('GET', url);
-                xhr.send();
+            // Download the image
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = 'downloaded_image.jpg';
+            link.click();
+            URL.revokeObjectURL(blobUrl);
+            setDownloaded(true);
 
-                // Or inserted into an <img> element
-                const img = document.getElementById('myimg');
-                img.setAttribute('src', url);
-            })
-            .catch((error) => {
-                console.log(error);
-            });
+            // Display the image in an <img> element
+            const img = document.getElementById('myimg');
+            img.src = url;
+        } catch (error) {
+            console.log(error);
+        }
     }
+
 
     return (
         <div className="HomePage">
             <h1>Home page</h1>
             <p>This is a Remote Learning App</p>
-            <Button onClick={downloadImage}>download space</Button>
+            <Button
+                variant={downloaded ? "secondary" : "primary"}
+                onClick={downloadImage}>
+                Download space img
+            </Button>
             <img id="myimg" alt="No img here"></img>
+            <Button>Upload</Button>
         </div>
     );
 };
