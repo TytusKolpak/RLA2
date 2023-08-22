@@ -17,7 +17,7 @@
 
 p {
     margin-bottom: 1rem;
-    padding: 0.5rem;
+    padding: 0.5rem 0.9rem 0.5rem 0.9rem;
     font-size: large;
 }
 
@@ -35,8 +35,18 @@ p {
 }
 
 #leftPanel {
-    #contacts {
-        margin-top: 25px;
+
+    #currentRecipient{
+        margin-top: 2rem;
+    }
+    
+    #contacts{    
+        overflow-y: auto;
+        margin-bottom: 2rem;
+    }
+
+    #contacts::-webkit-scrollbar {
+        display: none;
     }
 
     .warning {
@@ -53,8 +63,8 @@ p {
 
     #messageInput {
         width: 100%;
-        margin-top: 10px;
-        margin-bottom: 30px;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
     }
 
     #messageContainer {
@@ -68,17 +78,26 @@ p {
             display: flex;
             justify-content: flex-end;
             margin-right: 5px;
+            margin-left: 20%;
+
+            .timeDisplay{
+                text-align: right;
+            }
         }
 
         .recipient {
             display: flex;
             justify-content: flex-start;
-            margin-left: 5px;
+            margin-right: 20%;
         }
 
         .timeDisplay {
             font-size: small;
         }
+    }
+
+    #messageContainer::-webkit-scrollbar {
+        display: none;
     }
 }
 

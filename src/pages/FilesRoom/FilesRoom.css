@@ -18,3 +18,14 @@
     text-align: center;
     margin-bottom: 2rem;
 }
+
+.displaying{
+    min-width: 300px;
+    min-height: 400px;
+
+    .center{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+}

@@ -5,6 +5,7 @@ import './FilesRoom.css';
 import { useEffect, useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { ListGroup, ListGroupItem } from 'react-bootstrap';
+import Spinner from 'react-bootstrap/Spinner';
 
 // for getting auth on reload
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -13,12 +14,17 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { storage } from "../../firebase_setup/firebase";
 import { ref, getDownloadURL, uploadBytes, listAll } from "firebase/storage";
 
+// Database related
+import { firestore } from '../../firebase_setup/firebase';
+import { getDoc, doc } from 'firebase/firestore';
+
 function FilesRoom({ currentUser }) {
     const auth = getAuth();
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
     const [downloaded, setDownloaded] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [itemList, setItemList] = useState([]);
+    const [listLoaded, setListLoaded] = useState(false);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -27,27 +33,51 @@ function FilesRoom({ currentUser }) {
         });
 
         displayItems();
-
         // eslint-disable-next-line
     }, [])
 
-    function displayItems() {
-        const listRef = ref(storage, 'uploadedImages');
-        listAll(listRef)
-            .then(async (res) => {
-                const items = await Promise.all(res.items.map(async (itemRef) => {
-                    const downloadUrl = await getDownloadURL(itemRef);
-                    return {
-                        name: itemRef.name,
-                        downloadUrl
-                    };
-                }));
-                setItemList(items);
-            })
-            .catch((error) => {
-                console.log("Uh-oh, an error occurred!", error);
-            });
+    async function displayItems() {
+        // Access determination part
+        console.log("Finding user-available folders");
+        const collectionName = "StorageAccess";
+        const documentIdentification = currentUserEmail;
+        const docRef = doc(firestore, collectionName, documentIdentification);
+
+        const docSnap = await getDoc(docRef);
+
+        var accessGroups;
+        if (docSnap.exists()) {
+            // console.log("Document data:", docSnap.data());
+            accessGroups = docSnap.data().accessGroups;
+        } else {
+            // docSnap.data() will be undefined in this case
+            console.log("No such document for", currentUserEmail, "!");
+        }
+        // Displaying part
+        accessGroups.forEach(element => {
+            console.log("Displaying files in folder:", element);
+            const listRef = ref(storage, element);
+            listAll(listRef)
+                .then(async (res) => {
+                    const items = await Promise.all(res.items.map(async (itemRef) => {
+                        const downloadUrl = await getDownloadURL(itemRef);
+                        console.log(itemRef.name, downloadUrl);
+                        return {
+                            name: itemRef.name,
+                            downloadUrl
+                        };
+                    }));
+                    setItemList(items);
+                    console.log("X");
+                    setListLoaded(true);
+                    
+                })
+                .catch((error) => {
+                    console.log("Uh-oh, an error occurred!", error);
+                });
+        });
     }
+
     async function downloadImage() {
         try {
             console.log("Downloading and displaying the image");
@@ -113,23 +143,38 @@ function FilesRoom({ currentUser }) {
                         <Form.Group className="mb-3" controlId="input">
                             <Form.Control type="file" onChange={handleFileChange} />
                         </Form.Group>
-                        <Button variant="primary" type="submit">
-                            Upload
-                        </Button>
+                        {selectedFile ?
+                            <Button variant="primary" type="submit">
+                                Upload
+                            </Button>
+                            :
+                            <Button variant="primary" type="submit" disabled>
+                                Upload
+                            </Button>
+                        }
+
                     </Form>
                 </div>
 
                 <div className='displaying'>
                     <h4>Displaying</h4>
-                    <ListGroup>
-                        {itemList.map((item, index) => (
-                            <ListGroupItem key={index}>
-                                <a href={item.downloadUrl} download={item.name}>
-                                    {item.name}
-                                </a>
-                            </ListGroupItem>
-                        ))}
-                    </ListGroup>
+                    {listLoaded ?
+                        <ListGroup>
+                            {itemList.map((item, index) => (
+                                <ListGroupItem key={index}>
+                                    <a href={item.downloadUrl} download={item.name}>
+                                        {item.name}
+                                    </a>
+                                </ListGroupItem>
+                            ))}
+                        </ListGroup> :
+                        <div className='center'>
+                            <Spinner animation="border" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </Spinner>
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>

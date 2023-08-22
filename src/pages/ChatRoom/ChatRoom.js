@@ -313,6 +313,9 @@ function ChatRoom({ currentUser }) {
                     {!newContactExist && <h5 className='warning'>Specified user's email doesn't exist</h5>}
 
                 </div>
+
+                <h4 id='currentRecipient'>You are chatting with:</h4>
+
                 <div id='contacts'>
                     <ButtonGroup vertical='true'>
 

@@ -32,15 +32,26 @@ function App() {
 
                     {/* The "element" attribute corresponds to the import, 
                     path attribute corresponds to the "to" attribute in "Link" element in Layout.js  */}
-                    <Route path="/" element={<Layout currentUser={currentUser}/>}>
+                    <Route path="/" element={<Layout currentUser={currentUser} />}>
 
                         {/* Just "index" instead of path="..." means: when there is no specified value, such as localhost:3000 */}
                         <Route index element={<Home />} />
-                        <Route path="login" element={<Login currentUser={currentUser}/>} />
+                        <Route path="login" element={<Login currentUser={currentUser} />} />
                         <Route path="signup" element={<Signup />} />
-                        <Route path="chatRoom" element={<ChatRoom currentUser={currentUser} />} />
-                        <Route path="callRoom" element={<CallRoom currentUser={currentUser} />} />
-                        <Route path="filesRoom" element={<FilesRoom currentUser={currentUser} />} />
+
+                        {currentUser ?
+                            <>
+                                <Route path="chatRoom" element={<ChatRoom currentUser={currentUser} />} />
+                                <Route path="callRoom" element={<CallRoom currentUser={currentUser} />} />
+                                <Route path="filesRoom" element={<FilesRoom currentUser={currentUser} />} />
+                            </>
+                            :
+                            <>
+                                <Route path="chatRoom" element={<NoPage />} />
+                                <Route path="callRoom" element={<NoPage />} />
+                                <Route path="filesRoom" element={<NoPage />} />
+                            </>
+                        }
 
                         {/* The path="*" specifies that any uncovered path will lead to this element */}
                         <Route path="*" element={<NoPage />} />
