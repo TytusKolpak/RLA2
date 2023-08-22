@@ -32,6 +32,8 @@ function FilesRoom({ currentUser }) {
             setCurrentUserEmail(user.email);
         });
 
+        setItemList([]); // Purely for development convenience
+
         displayItems();
         // eslint-disable-next-line
     }, [])
@@ -40,6 +42,7 @@ function FilesRoom({ currentUser }) {
         // Access determination part
         console.log("Finding user-available folders");
         const collectionName = "StorageAccess";
+        console.log("currentUserEmail", currentUserEmail);
         const documentIdentification = currentUserEmail;
         const docRef = doc(firestore, collectionName, documentIdentification);
 
@@ -49,28 +52,26 @@ function FilesRoom({ currentUser }) {
         if (docSnap.exists()) {
             // console.log("Document data:", docSnap.data());
             accessGroups = docSnap.data().accessGroups;
+            console.log("accessGroups", accessGroups);
         } else {
             // docSnap.data() will be undefined in this case
             console.log("No such document for", currentUserEmail, "!");
         }
+
         // Displaying part
         accessGroups.forEach(element => {
             console.log("Displaying files in folder:", element);
             const listRef = ref(storage, element);
             listAll(listRef)
                 .then(async (res) => {
-                    const items = await Promise.all(res.items.map(async (itemRef) => {
+                    await Promise.all(res.items.map(async (itemRef) => {
                         const downloadUrl = await getDownloadURL(itemRef);
-                        console.log(itemRef.name, downloadUrl);
-                        return {
-                            name: itemRef.name,
-                            downloadUrl
-                        };
+                        console.log("Displaying:", itemRef.name, "from folder", itemRef.parent.name);
+
+                        // add currently found items to the list
+                        setItemList((itemList) => [...itemList, { name: itemRef.name, downloadUrlX: downloadUrl }]);
                     }));
-                    setItemList(items);
-                    console.log("X");
                     setListLoaded(true);
-                    
                 })
                 .catch((error) => {
                     console.log("Uh-oh, an error occurred!", error);
@@ -162,7 +163,7 @@ function FilesRoom({ currentUser }) {
                         <ListGroup>
                             {itemList.map((item, index) => (
                                 <ListGroupItem key={index}>
-                                    <a href={item.downloadUrl} download={item.name}>
+                                    <a href={item.downloadUrlX} download={item.name}>
                                         {item.name}
                                     </a>
                                 </ListGroupItem>
