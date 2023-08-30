@@ -19,7 +19,17 @@
     margin-bottom: 2rem;
 }
 
+.uploading{
+    max-width: 20vw;
+    max-height: 80vh;
+}
+
 .displaying{
+    max-width: 70vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: auto;
+
     min-width: 300px;
     min-height: 400px;
 
@@ -31,5 +41,10 @@
 
     .horizontalFlex{
         display: flex;
+
+        .accessGroup{
+            margin: 10px;
+            text-align: center;
+        }
     }
 }

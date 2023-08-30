@@ -18,13 +18,14 @@ import { ref, getDownloadURL, uploadBytes, listAll } from "firebase/storage";
 import { firestore } from '../../firebase_setup/firebase';
 import { getDoc, doc } from 'firebase/firestore';
 
+var itemsByFolder = {};
+
 function FilesRoom({ currentUser }) {
     const auth = getAuth();
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email);
     const [selectedFile, setSelectedFile] = useState(null);
     const [itemList, setItemList] = useState([]);
     const [listLoaded, setListLoaded] = useState(false);
-    const [accessGroupsToDisplay, setAccessGroupsToDisplay] = useState([]);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -37,6 +38,10 @@ function FilesRoom({ currentUser }) {
         displayItems();
         // eslint-disable-next-line
     }, [])
+
+    useEffect(()=>{
+        console.log("listLoaded got changed");
+    },[listLoaded])
 
     async function displayItems() {
         // Access determination part
@@ -59,7 +64,6 @@ function FilesRoom({ currentUser }) {
             // docSnap.data() will be undefined in this case
             console.log("No such document for", currentUserEmail, "!");
         }
-        setAccessGroupsToDisplay(accessGroups);
 
         // Building an UseState variable part
         accessGroups.forEach(accessGroup => {
@@ -79,12 +83,23 @@ function FilesRoom({ currentUser }) {
                             folder: itemRef.parent.name
                         }]);
                     }));
-                    setListLoaded(true);
                 })
                 .catch((error) => {
                     console.log("Uh-oh, an error occurred!", error);
                 });
         });
+
+        console.log(itemList);
+
+        // Organize items by folders
+        itemList.forEach(item => {
+            if (!itemsByFolder[item.folder]) {
+                itemsByFolder[item.folder] = [];
+            }
+            itemsByFolder[item.folder].push(item);
+        });
+
+        setListLoaded(true);
     }
 
     const handleFileChange = (event) => {
@@ -136,29 +151,31 @@ function FilesRoom({ currentUser }) {
                 <div className='displaying'>
                     <h4>Displaying files</h4>
 
-                    <div className='horizontalFlex'>
-                        {/* {accessGroupsToDisplay.map((str, index) => (
-                            <div key={index}>{str}</div>
-                        ))} */}
+                    {listLoaded ?
+                        <div className='horizontalFlex'>
+                            {Object.entries(itemsByFolder).map(([folder, items]) => (
+                                <div className="accessGroup" key={folder}>
+                                    <h6>{folder}</h6>
+                                    <ListGroup>
+                                        {items.map((item, index) => (
+                                            <ListGroupItem key={index}>
+                                                <a href={item.downloadUrlX} download={item.name}>
+                                                    {item.name}
+                                                </a>
+                                            </ListGroupItem>
+                                        ))}
+                                    </ListGroup>
+                                </div>
+                            ))}
+                        </div>
 
-                        {listLoaded ? 
-                        // tutaj by wypadało poprzydzielać te pliki do odpowiednich grup
-                            <ListGroup>
-                                {itemList.map((item, index) => (
-                                    <ListGroupItem key={index}>
-                                        <a href={item.downloadUrlX} download={item.name}>
-                                            {item.name} {item.folder}
-                                        </a>
-                                    </ListGroupItem>
-                                ))}
-                            </ListGroup>
+                        // Display a spinner when data is not loaded yet 
+                        : <div className='center'><Spinner animation="border" role="status"><span className="visually-hidden">Loading...</span></Spinner></div>
+                    }
 
-                            // Display a spinner when data is not loaded yet 
-                            : <div className='center'><Spinner animation="border" role="status"><span className="visually-hidden">Loading...</span></Spinner></div>
-                        }
-                    </div>
 
                 </div>
+
             </div>
         </div>
     );
