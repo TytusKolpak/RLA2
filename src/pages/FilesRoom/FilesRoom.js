@@ -20,11 +20,11 @@ import { getDoc, doc } from 'firebase/firestore';
 
 function FilesRoom({ currentUser }) {
     const auth = getAuth();
-    const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email)
-    const [downloaded, setDownloaded] = useState(false);
+    const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email);
     const [selectedFile, setSelectedFile] = useState(null);
     const [itemList, setItemList] = useState([]);
     const [listLoaded, setListLoaded] = useState(false);
+    const [accessGroupsToDisplay, setAccessGroupsToDisplay] = useState([]);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -41,13 +41,15 @@ function FilesRoom({ currentUser }) {
     async function displayItems() {
         // Access determination part
         console.log("Finding user-available folders");
-        const collectionName = "StorageAccess";
         console.log("currentUserEmail", currentUserEmail);
+
+        // Retrieving the document with access-list of current user from the database
+        const collectionName = "StorageAccess";
         const documentIdentification = currentUserEmail;
         const docRef = doc(firestore, collectionName, documentIdentification);
-
         const docSnap = await getDoc(docRef);
 
+        // Retrieving list of access groups assigned to this user
         var accessGroups;
         if (docSnap.exists()) {
             // console.log("Document data:", docSnap.data());
@@ -57,19 +59,25 @@ function FilesRoom({ currentUser }) {
             // docSnap.data() will be undefined in this case
             console.log("No such document for", currentUserEmail, "!");
         }
+        setAccessGroupsToDisplay(accessGroups);
 
-        // Displaying part
-        accessGroups.forEach(element => {
-            console.log("Displaying files in folder:", element);
-            const listRef = ref(storage, element);
+        // Building an UseState variable part
+        accessGroups.forEach(accessGroup => {
+            console.log("Displaying files in folder:", accessGroup);
+            const listRef = ref(storage, accessGroup);
+            console.log(listRef);
             listAll(listRef)
                 .then(async (res) => {
                     await Promise.all(res.items.map(async (itemRef) => {
                         const downloadUrl = await getDownloadURL(itemRef);
                         console.log("Displaying:", itemRef.name, "from folder", itemRef.parent.name);
 
-                        // add currently found items to the list
-                        setItemList((itemList) => [...itemList, { name: itemRef.name, downloadUrlX: downloadUrl }]);
+                        // add currently found items to the list 
+                        setItemList((itemList) => [...itemList, {
+                            name: itemRef.name,
+                            downloadUrlX: downloadUrl,
+                            folder: itemRef.parent.name
+                        }]);
                     }));
                     setListLoaded(true);
                 })
@@ -77,29 +85,6 @@ function FilesRoom({ currentUser }) {
                     console.log("Uh-oh, an error occurred!", error);
                 });
         });
-    }
-
-    async function downloadImage() {
-        try {
-            console.log("Downloading and displaying the image");
-            const spaceRef = ref(storage, 'images/space.jpg');
-            const url = await getDownloadURL(spaceRef);
-
-            // Download the image using fetch
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Download the image
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = 'downloaded_image.jpg';
-            link.click();
-            URL.revokeObjectURL(blobUrl);
-            setDownloaded(true);
-        } catch (error) {
-            console.log(error);
-        }
     }
 
     const handleFileChange = (event) => {
@@ -129,15 +114,6 @@ function FilesRoom({ currentUser }) {
             {currentUserEmail && <h1>FilesRoom of {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</h1>}
             <div className='fileOperationFields'>
 
-                <div className='downloading'>
-                    <h4>Downloading</h4>
-                    <Button
-                        variant={downloaded ? "secondary" : "primary"}
-                        onClick={downloadImage}>
-                        Download space img
-                    </Button>
-                </div>
-
                 <div className='uploading'>
                     <h4>Uploading</h4>
                     <Form onSubmit={handleUpload}>
@@ -158,23 +134,29 @@ function FilesRoom({ currentUser }) {
                 </div>
 
                 <div className='displaying'>
-                    <h4>Displaying</h4>
-                    {listLoaded ?
-                        <ListGroup>
-                            {itemList.map((item, index) => (
-                                <ListGroupItem key={index}>
-                                    <a href={item.downloadUrlX} download={item.name}>
-                                        {item.name}
-                                    </a>
-                                </ListGroupItem>
-                            ))}
-                        </ListGroup> :
-                        <div className='center'>
-                            <Spinner animation="border" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </Spinner>
-                        </div>
-                    }
+                    <h4>Displaying files</h4>
+
+                    <div className='horizontalFlex'>
+                        {/* {accessGroupsToDisplay.map((str, index) => (
+                            <div key={index}>{str}</div>
+                        ))} */}
+
+                        {listLoaded ? 
+                        // tutaj by wypadało poprzydzielać te pliki do odpowiednich grup
+                            <ListGroup>
+                                {itemList.map((item, index) => (
+                                    <ListGroupItem key={index}>
+                                        <a href={item.downloadUrlX} download={item.name}>
+                                            {item.name} {item.folder}
+                                        </a>
+                                    </ListGroupItem>
+                                ))}
+                            </ListGroup>
+
+                            // Display a spinner when data is not loaded yet 
+                            : <div className='center'><Spinner animation="border" role="status"><span className="visually-hidden">Loading...</span></Spinner></div>
+                        }
+                    </div>
 
                 </div>
             </div>
