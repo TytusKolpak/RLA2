@@ -18,14 +18,12 @@ import { ref, getDownloadURL, uploadBytes, listAll } from "firebase/storage";
 import { firestore } from '../../firebase_setup/firebase';
 import { getDoc, doc } from 'firebase/firestore';
 
-var itemsByFolder = {};
-
 function FilesRoom({ currentUser }) {
     const auth = getAuth();
     const [currentUserEmail, setCurrentUserEmail] = useState(currentUser.email);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [itemList, setItemList] = useState([]);
     const [listLoaded, setListLoaded] = useState(false);
+    const [itemsByFolder, setItemsByFolder] = useState({});
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -33,16 +31,11 @@ function FilesRoom({ currentUser }) {
             setCurrentUserEmail(user.email);
         });
 
-        setItemList([]); // Purely for development convenience
 
         displayItems();
         // eslint-disable-next-line
     }, [])
-
-    useEffect(()=>{
-        console.log("listLoaded got changed");
-    },[listLoaded])
-
+    
     async function displayItems() {
         // Access determination part
         console.log("Finding user-available folders");
@@ -65,39 +58,35 @@ function FilesRoom({ currentUser }) {
             console.log("No such document for", currentUserEmail, "!");
         }
 
-        // Building an UseState variable part
-        accessGroups.forEach(accessGroup => {
-            console.log("Displaying files in folder:", accessGroup);
+        const updatedItemList = [];
+        const updatedItemsByFolder = {};
+
+        for (const accessGroup of accessGroups) {
             const listRef = ref(storage, accessGroup);
-            console.log(listRef);
-            listAll(listRef)
-                .then(async (res) => {
-                    await Promise.all(res.items.map(async (itemRef) => {
-                        const downloadUrl = await getDownloadURL(itemRef);
-                        console.log("Displaying:", itemRef.name, "from folder", itemRef.parent.name);
 
-                        // add currently found items to the list 
-                        setItemList((itemList) => [...itemList, {
-                            name: itemRef.name,
-                            downloadUrlX: downloadUrl,
-                            folder: itemRef.parent.name
-                        }]);
-                    }));
-                })
-                .catch((error) => {
-                    console.log("Uh-oh, an error occurred!", error);
-                });
-        });
+            try {
+                const res = await listAll(listRef);
 
-        console.log(itemList);
+                for (const itemRef of res.items) {
+                    const downloadUrl = await getDownloadURL(itemRef);
+                    const newItem = {
+                        name: itemRef.name,
+                        downloadUrlX: downloadUrl,
+                        folder: itemRef.parent.name,
+                    };
+                    updatedItemList.push(newItem);
 
-        // Organize items by folders
-        itemList.forEach(item => {
-            if (!itemsByFolder[item.folder]) {
-                itemsByFolder[item.folder] = [];
+                    if (!updatedItemsByFolder[newItem.folder]) {
+                        updatedItemsByFolder[newItem.folder] = [];
+                    }
+                    updatedItemsByFolder[newItem.folder].push(newItem);
+                }
+            } catch (error) {
+                console.log("Uh-oh, an error occurred!", error);
             }
-            itemsByFolder[item.folder].push(item);
-        });
+        }
+
+        setItemsByFolder(updatedItemsByFolder);
 
         setListLoaded(true);
     }
