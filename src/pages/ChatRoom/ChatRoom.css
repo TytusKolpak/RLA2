@@ -51,8 +51,6 @@ p {
 
     .warning {
         color: red;
-        transition: opacity 1s ease-in-out;
-        /* Apply a 1-second fade-out transition */
     }
 }
 
