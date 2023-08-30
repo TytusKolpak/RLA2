@@ -19,4 +19,5 @@
 /* If you put an element selector inside a parent selector like those above - it doesn't work */
 #Login h4 {
     color: red;
+    text-align: center;
 }

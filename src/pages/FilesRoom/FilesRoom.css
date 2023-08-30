@@ -25,10 +25,11 @@
 
     .warning {
         color: red;
+        text-align: center;
     }
 }
 
-.uploading button {
+.uploading * {
     width: 100%;
 }
 
@@ -57,4 +58,24 @@
             max-width: 300px;
         }
     }
+}
+
+/* Modals */
+.modal-footer {
+    justify-content: space-between;
+}
+
+@media (prefers-color-scheme: dark) {
+    .modal-content {
+        background-color: rgb(51, 51, 51);
+        color: #fff;
+    }
+
+    .btn-close {
+        filter: invert(1);
+    }
+}
+
+p{
+    color: red;
 }

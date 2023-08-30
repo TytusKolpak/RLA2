@@ -10,13 +10,14 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 import Form from 'react-bootstrap/Form';
 import ListGroup from 'react-bootstrap/ListGroup';
 import ListGroupItem from 'react-bootstrap/ListGroupItem';
+import Modal from 'react-bootstrap/Modal';
 
 // for getting auth on reload
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // For accessing firebase cloud storage
 import { storage } from "../../firebase_setup/firebase";
-import { ref, getDownloadURL, uploadBytes, listAll } from "firebase/storage";
+import { ref, getDownloadURL, uploadBytes, listAll, uploadString } from "firebase/storage";
 
 // Database related
 import { firestore } from '../../firebase_setup/firebase';
@@ -32,6 +33,10 @@ function FilesRoom({ currentUser }) {
     const [accessGroups, setAccessGroups] = useState([]);
     const [newGroup, setNewGroup] = useState('');
     const [newGroupExists, setNewGroupExists] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [modalError, setModalError] = useState(false);
+    const [securityKey, setSecurityKey] = useState('');
+    const [securityKeyError, setSecurityKeyError] = useState(false);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -60,7 +65,7 @@ function FilesRoom({ currentUser }) {
         if (docSnap.exists()) {
             // console.log("Document data:", docSnap.data());
             accessGroups = docSnap.data().accessGroups;
-            console.log("accessGroups", accessGroups);
+            // console.log("accessGroups", accessGroups);
         } else {
             // docSnap.data() will be undefined in this case
             console.log("No such document for", currentUserEmail, "!");
@@ -94,7 +99,7 @@ function FilesRoom({ currentUser }) {
                 console.log("Uh-oh, an error occurred!", error);
             }
         }
-        console.log("updatedItemsByFolder:", updatedItemsByFolder);
+        // console.log("updatedItemsByFolder:", updatedItemsByFolder);
 
         setItemsByFolder(updatedItemsByFolder);
 
@@ -140,7 +145,7 @@ function FilesRoom({ currentUser }) {
 
         const groups = docSnapshot.data().groups;
         const hasNewGroup = groups.includes(newGroup);
-        
+
         if (hasNewGroup) {
             console.log("Specified group exists. Adding it to users access groups.");
 
@@ -148,37 +153,70 @@ function FilesRoom({ currentUser }) {
             const documentIdentification = currentUserEmail;
             const docRef = doc(firestore, collectionName, documentIdentification);
 
-            await updateDoc(docRef,{
+            await updateDoc(docRef, {
                 accessGroups: arrayUnion(newGroup)
             });
 
+            setNewGroup('');
             displayItems();
         } else {
             console.log("Specified group doesn't exist!");
             setNewGroupExists(false)
             // Turn off the visibility after 5 seconds
             setTimeout(() => {
-                setNewGroupExists(true)
+                setNewGroupExists(true);
             }, 5000);
         }
+    }
 
-        // // Add a new group to current user in access group collection
-        // try {
-        //     const collectionName = "StorageAccess";
-        //     const documentIdentification = currentUserEmail;
-        //     const docRef = doc(firestore, collectionName, documentIdentification);
-        //     const docSnap = await getDoc(docRef);
+    async function confirmCreation() {
+        if (newGroup) {
+            if (securityKey !== "Security key") {
+                setSecurityKeyError(true);
+    
+                // Hide the message
+                setTimeout(() => {
+                    setSecurityKeyError(false);
+                }, 5000);
+                return;
+            }
+            
+            console.log("Creating new group:", newGroup);
 
-        //     if (docSnap) {
-        //         console.log("Adding an access group to current user");
-        //     }
+            // Create a new group (a dummy file with a path like the one specified )
+            const storageRef = ref(storage, newGroup + "/Hello.txt");
+            const dummy = 'This file is a dummy to make the new "folder" appear.';
+            uploadString(storageRef, dummy);
 
-        // } catch (e) {
-        //     console.error("Error adding document: ", e);
-        // }
+            // Add this group to a StorageGroups list
+            const collectionName = "StorageAccess";
+            var documentIdentification = "StorageGroups";
+            var docRef = doc(firestore, collectionName, documentIdentification);
+            await updateDoc(docRef, {
+                groups: arrayUnion(newGroup)
+            });
 
-        // Clear input field
-        setNewGroup('')
+            // Add a this group to the groups which current user can access 
+            documentIdentification = currentUserEmail;
+            docRef = doc(firestore, collectionName, documentIdentification);
+            await updateDoc(docRef, {
+                accessGroups: arrayUnion(newGroup)
+            });
+
+            // Finalize
+            setSecurityKey('');
+            setNewGroup('');
+            setShowModal(false);
+            displayItems();
+        } else {
+            console.log("No group specified");
+            setModalError(true);
+
+            // Hide the message
+            setTimeout(() => {
+                setModalError(false);
+            }, 5000);
+        }
     }
 
     return (
@@ -203,28 +241,70 @@ function FilesRoom({ currentUser }) {
                             ))}
                         </DropdownButton>
 
-                        <Button variant="primary" type="submit" disabled={(!selectedFolder || !selectedFile)}>
-                            Upload
+                        {/* Disable it it if selected folder is not yet selected (still a placeholder) or if there is no selected file yet */}
+                        <Button variant="primary" type="submit" disabled={(selectedFolder === "Select folder to upload to" || !selectedFile)}>
+                            Upload a file
                         </Button>
                     </Form>
 
                     <h4 className='mt-5'>Groups</h4>
-                    <div className='newContact'>
+                    <div className='newGroup'>
                         <Form onSubmit={handleNewGroupSubmit}>
                             <Form.Group className="mb-3">
                                 <Form.Control
-                                    placeholder="Enter group to join"
+                                    placeholder="Enter the name of a group to join it"
                                     value={newGroup}
-                                    onChange={e => setNewGroup(e.target.value)}
-                                />
+                                    onChange={e => setNewGroup(e.target.value)} />
                             </Form.Group>
-                            <Button variant="primary" type="submit">
-                                Add
+
+                            <Button className="mb-3" variant="primary" type="submit" disabled={!newGroup}>
+                                Join a group
                             </Button>
                         </Form>
 
-                        {!newGroupExists && <h5 className='warning'>Specified group doesn't exist!</h5>}
+                        {!newGroupExists &&
+                            <>
+                                <h5 className='warning'>Specified group doesn't exist!</h5>
+                                <Button variant='outline-primary' onClick={() => setShowModal(true)}>Create such group</Button>
+                            </>}
 
+                        <Modal
+                            show={showModal}
+                            onHide={() => setShowModal(false)}
+                            backdrop="static"
+                            centered>
+                            <Modal.Header closeButton>
+                                <Modal.Title>Create a group</Modal.Title>
+                            </Modal.Header>
+
+                            <Modal.Body>
+                                <Form>
+                                    <Form.Group className="mb-3" >
+                                        <Form.Label>Enter the name of a group to be created:</Form.Label>
+                                        <Form.Control
+                                            placeholder="Group name"
+                                            value={newGroup}
+                                            onChange={e => setNewGroup(e.target.value)} />
+                                    </Form.Group>
+                                    <Form.Group className="mb-3" controlId="formBasicPassword">
+                                        <Form.Label>Enter security key:</Form.Label>
+                                        <Form.Control
+                                            type="password"
+                                            placeholder="Security key"
+                                            value={securityKey}
+                                            onChange={e => setSecurityKey(e.target.value)} />
+                                    </Form.Group>
+                                </Form>
+                                {modalError && <p> New group name cannot be empty. Please specify a name.</p>}
+                                {securityKeyError && <p> Wrong security key.</p>}
+
+                            </Modal.Body>
+
+                            <Modal.Footer>
+                                <Button variant="primary" onClick={confirmCreation}>Create</Button>
+                                <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+                            </Modal.Footer>
+                        </Modal>
                     </div>
                 </div>
 
@@ -257,7 +337,7 @@ function FilesRoom({ currentUser }) {
                 </div>
 
             </div>
-        </div>
+        </div >
     );
 }
 

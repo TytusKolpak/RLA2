@@ -335,7 +335,7 @@ const CallRoom = ({ currentUser }) => {
 
             <div id="videos">
                 <div>
-                    {localVideoVisible && <h4 className="center"> That's you</h4>}
+                    {localVideoVisible && <h4 className="center"> That's You</h4>}
                     <video id="localVideo" muted autoPlay playsInline></video>
                 </div>
                 <div>
