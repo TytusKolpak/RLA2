@@ -42,6 +42,8 @@
     min-width: 300px;
     min-height: 400px;
 
+    text-align: center;
+
     .center {
         display: flex;
         justify-content: center;

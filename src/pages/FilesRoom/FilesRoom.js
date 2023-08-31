@@ -37,6 +37,7 @@ function FilesRoom({ currentUser }) {
     const [modalError, setModalError] = useState(false);
     const [securityKey, setSecurityKey] = useState('');
     const [securityKeyError, setSecurityKeyError] = useState(false);
+    const [hasNoFiles, setHasNoFiles] = useState(false);
 
     useEffect(() => {
         console.log("Initializing user email");
@@ -60,48 +61,58 @@ function FilesRoom({ currentUser }) {
         const docRef = doc(firestore, collectionName, documentIdentification);
         const docSnap = await getDoc(docRef);
 
-        // Retrieving list of access groups assigned to this user
-        var accessGroups;
+        // Retrieving list of access groups assigned to this user (X is to differentiate it from the useState variable)
+        var accessGroupsX;
         if (docSnap.exists()) {
             // console.log("Document data:", docSnap.data());
-            accessGroups = docSnap.data().accessGroups;
-            // console.log("accessGroups", accessGroups);
+            accessGroupsX = docSnap.data().accessGroups;
+            setAccessGroups(accessGroups);
+
+            // If user doesn't have empty access groups array
+            if (accessGroupsX.length !== 0) {
+                console.log("User belongs to some access groups.");
+                const updatedItemList = [];
+                const updatedItemsByFolder = {};
+
+                for (const accessGroup of accessGroupsX) {
+                    const listRef = ref(storage, accessGroup);
+                    console.log("Displaying files for:", accessGroup);
+                    try {
+                        const res = await listAll(listRef);
+
+                        for (const itemRef of res.items) {
+                            console.log("Displaying:", itemRef.name);
+                            const downloadUrl = await getDownloadURL(itemRef);
+                            const newItem = {
+                                name: itemRef.name,
+                                downloadUrlX: downloadUrl,
+                                folder: itemRef.parent.name,
+                            };
+                            updatedItemList.push(newItem);
+
+                            if (!updatedItemsByFolder[newItem.folder]) {
+                                updatedItemsByFolder[newItem.folder] = [];
+                            }
+                            updatedItemsByFolder[newItem.folder].push(newItem);
+                        }
+                    } catch (error) {
+                        console.log("Uh-oh, an error occurred!", error);
+                    }
+                }
+                // console.log("updatedItemsByFolder:", updatedItemsByFolder);
+
+                setItemsByFolder(updatedItemsByFolder);
+                setHasNoFiles(false);
+            } else {
+                console.log(currentUserEmail, "has no files!");
+                setHasNoFiles(true);
+            }
+
         } else {
             // docSnap.data() will be undefined in this case
-            console.log("No such document for", currentUserEmail, "!");
+            console.log(currentUserEmail, "has no files!");
+            setHasNoFiles(true);
         }
-        setAccessGroups(accessGroups);
-
-        const updatedItemList = [];
-        const updatedItemsByFolder = {};
-
-        for (const accessGroup of accessGroups) {
-            const listRef = ref(storage, accessGroup);
-
-            try {
-                const res = await listAll(listRef);
-
-                for (const itemRef of res.items) {
-                    const downloadUrl = await getDownloadURL(itemRef);
-                    const newItem = {
-                        name: itemRef.name,
-                        downloadUrlX: downloadUrl,
-                        folder: itemRef.parent.name,
-                    };
-                    updatedItemList.push(newItem);
-
-                    if (!updatedItemsByFolder[newItem.folder]) {
-                        updatedItemsByFolder[newItem.folder] = [];
-                    }
-                    updatedItemsByFolder[newItem.folder].push(newItem);
-                }
-            } catch (error) {
-                console.log("Uh-oh, an error occurred!", error);
-            }
-        }
-        // console.log("updatedItemsByFolder:", updatedItemsByFolder);
-
-        setItemsByFolder(updatedItemsByFolder);
 
         setListLoaded(true);
     }
@@ -140,9 +151,9 @@ function FilesRoom({ currentUser }) {
         const collectionName = "StorageAccess";
         const documentIdentification = "StorageGroups";
         const docRef = doc(firestore, collectionName, documentIdentification);
-
         const docSnapshot = await getDoc(docRef);
 
+        // Check if specified group exists in groups field of StorageGroups document
         const groups = docSnapshot.data().groups;
         const hasNewGroup = groups.includes(newGroup);
 
@@ -173,14 +184,14 @@ function FilesRoom({ currentUser }) {
         if (newGroup) {
             if (securityKey !== "Security key") { // Yes, just a hardcoded "password" which is the same as a placeholder
                 setSecurityKeyError(true);
-    
+
                 // Hide the message
                 setTimeout(() => {
                     setSecurityKeyError(false);
                 }, 5000);
                 return;
             }
-            
+
             console.log("Creating new group:", newGroup);
 
             // Create a new group (a dummy file with a path like the one specified )
@@ -247,7 +258,7 @@ function FilesRoom({ currentUser }) {
                         </Button>
                     </Form>
 
-                    <h4 className='mt-5'>Groups</h4>
+                    <h4 className='mt-5'>Access Groups</h4>
                     <div className='newGroup'>
                         <Form onSubmit={handleNewGroupSubmit}>
                             <Form.Group className="mb-3">
@@ -333,9 +344,9 @@ function FilesRoom({ currentUser }) {
                         : <div className='center'><Spinner animation="border" role="status"><span className="visually-hidden">Loading...</span></Spinner></div>
                     }
 
+                    {hasNoFiles && "User has no files."}
 
                 </div>
-
             </div>
         </div >
     );
