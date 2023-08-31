@@ -171,7 +171,7 @@ function FilesRoom({ currentUser }) {
 
     async function confirmCreation() {
         if (newGroup) {
-            if (securityKey !== "Security key") {
+            if (securityKey !== "Security key") { // Yes, just a hardcoded "password" which is the same as a placeholder
                 setSecurityKeyError(true);
     
                 // Hide the message

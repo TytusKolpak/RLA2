@@ -9,6 +9,8 @@ import NoPage from "../pages/NoPage/NoPage";
 import ChatRoom from "../pages/ChatRoom/ChatRoom";
 import CallRoom from '../pages/CallRoom/CallRoom';
 import FilesRoom from '../pages/FilesRoom/FilesRoom';
+import GradesRoom from '../pages/GradesRoom/GradesRoom';
+import CoursesRoom from '../pages/CoursesRoom/CoursesRoom';
 
 import { useState, useEffect } from 'react';
 
@@ -44,12 +46,15 @@ function App() {
                                 <Route path="chatRoom" element={<ChatRoom currentUser={currentUser} />} />
                                 <Route path="callRoom" element={<CallRoom currentUser={currentUser} />} />
                                 <Route path="filesRoom" element={<FilesRoom currentUser={currentUser} />} />
+                                <Route path="gradesRoom" element={<GradesRoom currentUser={currentUser} />} />
+                                <Route path="coursesRoom" element={<CoursesRoom currentUser={currentUser} />} />
                             </>
                             :
                             <>
                                 <Route path="chatRoom" element={<NoPage />} />
                                 <Route path="callRoom" element={<NoPage />} />
                                 <Route path="filesRoom" element={<NoPage />} />
+                                <Route path="coursesRoom" element={<NoPage />} />
                             </>
                         }
 

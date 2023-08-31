@@ -40,7 +40,7 @@ const Login = ({currentUser}) => {
                 // Signed in 
                 console.log("Success, You are signed in.");
                 console.log("user:", userCredential.user.email);
-                navigate('/callRoom');
+                navigate('/chatRoom');
             })
             .catch((error) => {
                 // Failed to signed in 
