@@ -52,6 +52,13 @@ const Signup = () => {
         }
     }
 
+    async function addStorageAccessDocument() {
+        console.log("Adding a Storage Access document for new user.");
+        const collectionName = "StorageAccess";
+        const ID = email.toLowerCase(); // For some reason that's the way it needs to be
+        await setDoc(doc(firestore, collectionName, ID), { accessGroups: [] });
+    }
+
     const handleFormSubmit = (e) => {
         e.preventDefault();
 
@@ -70,6 +77,7 @@ const Signup = () => {
                 // Add necessary database entries
                 addContactsDocument(); // For contacts
                 addGradingDocument(); // For grading
+                addStorageAccessDocument(); // For accessing files
 
                 const displayTime = 10 // seconds
                 // Hide the message

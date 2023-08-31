@@ -104,13 +104,13 @@ function FilesRoom({ currentUser }) {
                 setItemsByFolder(updatedItemsByFolder);
                 setHasNoFiles(false);
             } else {
-                console.log(currentUserEmail, "has no files!");
+                console.log(currentUserEmail, "has no access groups!");
                 setHasNoFiles(true);
             }
 
         } else {
             // docSnap.data() will be undefined in this case
-            console.log(currentUserEmail, "has no files!");
+            console.log(currentUserEmail, "has no group-access document in the database!");
             setHasNoFiles(true);
         }
 
