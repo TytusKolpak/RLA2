@@ -25,13 +25,16 @@ const Signup = () => {
 
     async function addContactsDocument() {
         console.log("adding a Contacts document for new user.");
-        await addDoc(collection(firestore, "Contacts"), { ownerAddress: email, contacts: [] });
+        await addDoc(collection(firestore, "Contacts"), {
+            ownerAddress: email.toLowerCase(), // For some reason that's the way it needs to be 
+            contacts: []
+        });
     }
 
     async function addGradingDocument() {
         console.log("Adding a Grades document for new user.");
         const collectionName = "Grades";
-        const ID = email;
+        const ID = email.toLowerCase(); // For some reason that's the way it needs to be
 
         // All documents' ID is their owner email (for convenience),
         // teachers have isTeacher field as true, and linked students
