@@ -1,4 +1,6 @@
 import { Outlet, Link } from "react-router-dom";
+import { LinkContainer } from 'react-router-bootstrap';
+
 import Container from 'react-bootstrap/Container';
 import Navbar from 'react-bootstrap/Navbar';
 import NavDropdown from 'react-bootstrap/NavDropdown';
@@ -18,23 +20,26 @@ const Layout = ({ currentUser }) => {
             <Navbar fixed="top" expand="lg" className="bg-body-tertiary" data-bs-theme={variantDark ? 'dark' : 'light'}>
                 <Container>
                     <Link to="/">Home</Link>
-                    {currentUser && <NavDropdown title="Rooms" id="basic-nav-dropdown">
-                        <NavDropdown.Item href="#action/3.1">
-                            <Link to="/chatRoom">ChatRoom</Link>
-                        </NavDropdown.Item>
-                        <NavDropdown.Item href="#action/3.2">
-                            <Link to="/callRoom">CallRoom</Link>
-                        </NavDropdown.Item>
-                        <NavDropdown.Item href="#action/3.3">
-                            <Link to="/filesRoom">FilesRoom</Link>
-                        </NavDropdown.Item>
-                        <NavDropdown.Item href="#action/3.4">
-                            <Link to="/coursesRoom">CoursesRoom</Link>
-                        </NavDropdown.Item>
-                        <NavDropdown.Item href="#action/3.5">
-                            <Link to="/gradesRoom">GradesRoom</Link>
-                        </NavDropdown.Item>
-                    </NavDropdown>}
+                    {
+                        currentUser &&
+                        <NavDropdown title="Rooms" id="basic-nav-dropdown">
+                            <LinkContainer to="/chatRoom">
+                                <NavDropdown.Item>ChatRoom</NavDropdown.Item>
+                            </LinkContainer>
+                            <LinkContainer to="/callRoom">
+                                <NavDropdown.Item>CallRoom</NavDropdown.Item>
+                            </LinkContainer>
+                            <LinkContainer to="/filesRoom">
+                                <NavDropdown.Item>FilesRoom</NavDropdown.Item>
+                            </LinkContainer>
+                            <LinkContainer to="/coursesRoom">
+                                <NavDropdown.Item>CoursesRoom</NavDropdown.Item>
+                            </LinkContainer>
+                            <LinkContainer to="/gradesRoom">
+                                <NavDropdown.Item>GradesRoom</NavDropdown.Item>
+                            </LinkContainer>
+                        </NavDropdown>
+                    }
                     <Link to="/login">Login</Link>
                     <Link to="/signup">Signup</Link>
                 </Container>

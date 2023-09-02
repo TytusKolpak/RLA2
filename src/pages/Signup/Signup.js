@@ -29,7 +29,7 @@ const Signup = () => {
     }
 
     async function addGradingDocument() {
-        console.log("Adding a Grading document for new user.");
+        console.log("Adding a Grades document for new user.");
         const collectionName = "Grades";
         const ID = email;
 

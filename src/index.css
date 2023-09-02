@@ -22,6 +22,11 @@ code {
     /* Dark font color */
 }
 
+nav a{
+    text-decoration: none;
+    color: black;
+}
+
 @media (prefers-color-scheme: dark) {
 
     /* If the user has a dark theme */
@@ -30,5 +35,9 @@ code {
         /* Dark background color */
         color: #ffffff;
         /* White font color */
+    }
+
+    nav a{
+        color: white;
     }
 }
