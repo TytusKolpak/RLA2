@@ -11,18 +11,33 @@
         display: flex;
         width: 100%;
         justify-content: space-around;
+        overflow-y: auto;
+        max-height: 250px;
     }
 
     .grades {
-        width: 40vw;
-    }
-
-    .grades>* {
-        margin-top: 1rem;
-        margin-bottom: 1rem;
+        width: 90%;
+        /* flex-grow: 1; */
     }
 
     .gradeTable .row:first-child {
         font-weight: bold;
+    }
+
+    .mainPanel {
+        overflow-y: auto;
+        max-height: 300px;
+    }
+
+    .gradeTable {
+        flex-grow: 1;
+    }
+
+    .row>* {
+        padding: 0;
+    }
+
+    .col>.btn {
+        padding: 0;
     }
 }
