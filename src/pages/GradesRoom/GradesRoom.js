@@ -22,13 +22,15 @@ const GradesRoom = ({ currentUser }) => {
     const [selectedParticipant, setSelectedParticipant] = useState(null);
     const [allGradeData, setAllGradeData] = useState([]);
     const [isTeacher, setIsTeacher] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+    const [showGradingModal, setShowGradingModal] = useState(false);
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
     const [gradeName, setGradeName] = useState('');
     const [gradeScoredPoints, setGradeScoredPoints] = useState(0);
     const [gradeMaxPoints, setGradeMaxPoints] = useState(0);
     // on a scale from 1-100 (%) how much given type of grade affects the final score
     const [gradeWeight, setGradeWeight] = useState(0);
     const [finalGradeAllData, setFinalGradeAllData] = useState([])
+    const [templateParameters, setTemplateParameters] = useState([])
 
     useEffect(() => {
         console.log("Init")
@@ -175,14 +177,20 @@ const GradesRoom = ({ currentUser }) => {
                 doc.data().percentageScore,
                 doc.data().gradeInScale,
                 doc.data().gradeInScaleName,
-                doc.id
+                doc.id,
+                doc.data().gradeWeight
             ]])
         });
     }
 
-    function showGradingModal() {
+    function displayGradingModal() {
         console.log("Showing grading modal.");
-        setShowModal(true);
+        setShowGradingModal(true);
+    }
+
+    function displayTemplateModal() {
+        console.log("Showing Template modal");
+        setShowTemplateModal(true);
     }
 
     async function createNewGrade(e) {
@@ -270,6 +278,11 @@ const GradesRoom = ({ currentUser }) => {
         ]])
     }
 
+    async function createNewTemplate(e) {
+        e.preventDefault()
+        console.log(templateParameters);
+    }
+
     async function deleteGrade(gradeID, indexToRemove) {
         console.log("Deleting a grade of id:", gradeID, "for:", selectedParticipant, "in course:", selectedCourse);
 
@@ -284,6 +297,13 @@ const GradesRoom = ({ currentUser }) => {
 
         // Delete from database
         await deleteDoc(doc(firestore, "Grades", selectedParticipant, selectedCourse, gradeID));
+    }
+
+    // One UseState variable, many inputs handled maybe better extra 3 line function than n(3 for a total of 4) more variables 
+    function handleTemplateInputs(value, index) {
+        const updatedParameters = [...templateParameters];
+        updatedParameters[index] = value;
+        setTemplateParameters(updatedParameters);
     }
 
     return (
@@ -337,24 +357,27 @@ const GradesRoom = ({ currentUser }) => {
                                             {element[3] ? <Col>{element[3]}%</Col> : <Col>-</Col>}
                                             <Col>{element[4]}</Col>
                                             <Col>{element[7]}</Col>
-                                            {isTeacher && <Col><Button variant="primary" onClick={() => deleteGrade(element[6], index)}>Delete</Button></Col>}
+                                            {isTeacher && <Col><Button variant="secondary" onClick={() => deleteGrade(element[6], index)}>Delete</Button></Col>}
                                         </Row>
                                     ))}
                                 </Container>
                             </div>
                             <hr></hr>
-                            {finalGradeAllData &&
-                                <div className="finalGrade">
-                                    <p>Total points scored: <b>{finalGradeAllData[0]}/{finalGradeAllData[1]}</b>, which is: <b>{finalGradeAllData[2]}%</b>. Final score: <b>{finalGradeAllData[3]}</b> - <b>"{finalGradeAllData[4]}"</b>.</p>
-                                </div>
-                            }
-                            {isTeacher && <Button onClick={showGradingModal}>Create new grade</Button>}
+                            <div className="results">
+                                {finalGradeAllData &&
+                                    <div>
+                                        <p>Total points scored: <b>{finalGradeAllData[0]}/{finalGradeAllData[1]}</b>, which is: <b>{finalGradeAllData[2]}%</b>. Final score: <b>{finalGradeAllData[3]}</b> - <b>"{finalGradeAllData[4]}"</b>.</p>
+                                    </div>
+                                }
+                                {isTeacher && <div><Button onClick={displayGradingModal}>Create new grade</Button></div>}
+                                {isTeacher && <div><Button variant="secondary" onClick={displayTemplateModal}>Create new template</Button></div>}
+                            </div>
                         </>
                 }
             </div>
 
             {/* It's displayed atop of everything else so it doesn't matter where in this structure it is placed */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>
+            <Modal show={showGradingModal} onHide={() => setShowGradingModal(false)} backdrop="static" centered>
 
                 <Form>
                     <Modal.Header closeButton>
@@ -407,7 +430,60 @@ const GradesRoom = ({ currentUser }) => {
 
                     <Modal.Footer>
                         <Button type="submit" variant="primary" onClick={createNewGrade}>Create</Button>
-                        <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+                        <Button variant="secondary" onClick={() => setShowGradingModal(false)}>Close</Button>
+                    </Modal.Footer>
+                </Form>
+            </Modal>
+            <Modal show={showTemplateModal} onHide={() => setShowTemplateModal(false)} backdrop="static" centered>
+
+                <Form>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Create new template for new grades</Modal.Title>
+                    </Modal.Header>
+
+                    <Modal.Body>
+                        <Form.Group className="mb-3" >
+                            <Form.Label>Template name:</Form.Label>
+                            <Form.Control
+                                className="mb-3"
+                                placeholder="Name"
+                                value={templateParameters[0]}
+                                onChange={e => handleTemplateInputs(e.target.value, 0)} />
+
+                            <h5 className="templateModalH5">Default values for new grade</h5>
+                            <Form.Label>Name:</Form.Label>
+                            <Form.Control
+                                className="mb-3"
+                                placeholder="Name"
+                                value={templateParameters[1]}
+                                onChange={e => handleTemplateInputs(e.target.value, 1)} />
+
+                            <Row className="mb-3">
+                                <Form.Group as={Col}>
+                                    <Form.Label>Max points:</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        placeholder="Max points"
+                                        value={templateParameters[2]}
+                                        onChange={e =>  handleTemplateInputs(parseFloat(e.target.value), 2)} />
+                                </Form.Group>
+
+                                <Form.Group as={Col}>
+                                    <Form.Label>Weight (%):</Form.Label>
+                                    <Form.Control
+                                        type="number"
+                                        placeholder="Weight"
+                                        value={templateParameters[3]}
+                                        onChange={e => handleTemplateInputs(parseFloat(e.target.value), 3)} />
+                                </Form.Group>
+                            </Row>
+
+                        </Form.Group>
+                    </Modal.Body>
+
+                    <Modal.Footer>
+                        <Button type="submit" variant="primary" onClick={createNewTemplate}>Create</Button>
+                        <Button variant="secondary" onClick={() => setShowTemplateModal(false)}>Close</Button>
                     </Modal.Footer>
                 </Form>
             </Modal>

@@ -40,4 +40,14 @@
     .col>.btn {
         padding: 0;
     }
+
+    .results {
+        display: flex;
+        justify-content: space-evenly;
+    }
+}
+
+.templateModalH5 {
+    margin-top: 2rem;
+    text-align: center;
 }
