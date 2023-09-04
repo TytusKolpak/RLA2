@@ -14,6 +14,11 @@ import Col from 'react-bootstrap/Col';
 import Button from "react-bootstrap/Button";
 import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
+import Dropdown from 'react-bootstrap/Dropdown';
+import DropdownButton from 'react-bootstrap/DropdownButton';
+
+// // Used to trigger a database read only once but not on screen render
+// var templateDropdownPopulated = false;
 
 const GradesRoom = ({ currentUser }) => {
     const [userCourses, setUserCourses] = useState([]);
@@ -24,13 +29,19 @@ const GradesRoom = ({ currentUser }) => {
     const [isTeacher, setIsTeacher] = useState(false);
     const [showGradingModal, setShowGradingModal] = useState(false);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
+
+    // In grade modal
     const [gradeName, setGradeName] = useState('');
-    const [gradeScoredPoints, setGradeScoredPoints] = useState(0);
-    const [gradeMaxPoints, setGradeMaxPoints] = useState(0);
+    const [gradeScoredPoints, setGradeScoredPoints] = useState("");
+    const [gradeMaxPoints, setGradeMaxPoints] = useState("");
+
     // on a scale from 1-100 (%) how much given type of grade affects the final score
-    const [gradeWeight, setGradeWeight] = useState(0);
+    const [gradeWeight, setGradeWeight] = useState(100);
     const [finalGradeAllData, setFinalGradeAllData] = useState([])
-    const [templateParameters, setTemplateParameters] = useState([])
+
+    // Without initial allocation of 4 values, there is an error: A component is changing an uncontrolled input to be controlled. (100 is for weight)
+    const [newTemplateParameters, setNewTemplateParameters] = useState(["", "", "", 100])
+    const [dropdownTemplateNames, setDropdownTemplateNames] = useState([])
 
     useEffect(() => {
         console.log("Init")
@@ -43,31 +54,35 @@ const GradesRoom = ({ currentUser }) => {
     useEffect(() => {
         console.log("allGradeData changed");
         var totalPointsToGet = 0;
-        var totalPointsScored = 0;
+        var totalWeightedPointsScored = 0;
         var sumWeight = 0;
-        const workingArray = allGradeData;
-
-        console.log(workingArray);
 
         // Consider grade weights in calculating final score
-        for (let index = 0; index < workingArray.length; index++) {
-            const element = workingArray[index];
-            console.log(element);
-            totalPointsScored += element[1] * element[7];
-            totalPointsToGet += element[2];
-            sumWeight += element[7];
+        for (let index = 0; index < allGradeData.length; index++) {
+            const element = allGradeData[index];
+            let scoredPoints = element[1];
+            let maxPoints = element[2];
+            let weight = element[7] / 100;
+
+            // nominator = score * weight (sum)
+            totalWeightedPointsScored += scoredPoints * weight;
+            totalPointsToGet += maxPoints * weight;
+            console.log(scoredPoints, "x ", weight, "=>", scoredPoints * weight, "over ", weight);
+
+            // denominator = weight (sum)
+            sumWeight += weight;
         }
 
-        // Get the average weight to get back to the "original" value
-        const averageWeight = sumWeight / workingArray.length;
+        // The important part is calculating the weighted average
+        console.log("totalWeightedPointsScored", totalWeightedPointsScored, "sumWeight", sumWeight, "totalPointsToGet", totalPointsToGet);
 
-        // Take it from the state in which they are multiplied by weight (1-100) to their "original" value
-        totalPointsScored /= averageWeight;
-        totalPointsScored = Math.round(totalPointsScored * 100) / 100
+        var weightedAverage = Math.round(totalWeightedPointsScored * 100) / 100;
+        console.log("weightedAverage = sum(points*weight)/sum(weight):", weightedAverage);
 
-        const finalScoreAsPercentage = Math.round(totalPointsScored / totalPointsToGet * 100)
-        console.log("totalPointsScored", totalPointsScored, "totalPointsToGet", totalPointsToGet, "finalScoreAsPercentage", finalScoreAsPercentage);
+        var weightedAverageMax = Math.round(totalPointsToGet * 100) / 100;
+        console.log("weightedAverageMax = sum(maxPoints*weight)/sum(weight):", weightedAverageMax);
 
+        let finalScoreAsPercentage = Math.round(weightedAverage / weightedAverageMax * 10000) / 100;
         let gradeInScale;
         let gradeInScaleName;
         switch (true) {
@@ -96,7 +111,7 @@ const GradesRoom = ({ currentUser }) => {
                 gradeInScaleName = "Niedostateczny";
         }
 
-        setFinalGradeAllData([totalPointsScored, totalPointsToGet, finalScoreAsPercentage, gradeInScale, gradeInScaleName])
+        setFinalGradeAllData([weightedAverage, weightedAverageMax, finalScoreAsPercentage, gradeInScale, gradeInScaleName])
     }, [allGradeData])
 
     async function checkIfTeacher() {
@@ -148,7 +163,10 @@ const GradesRoom = ({ currentUser }) => {
 
         if (docSnap.exists()) {
             // console.log("Participants:", docSnap.data().participants);
-            setParticipants(docSnap.data().participants)
+
+            // without the teacher
+            const filteredParticipants = docSnap.data().participants.filter((participant) => participant !== currentUser.email)
+            setParticipants(filteredParticipants)
         } else {
             // docSnap.data() will be undefined in this case
             console.log("No such document!");
@@ -188,8 +206,17 @@ const GradesRoom = ({ currentUser }) => {
         setShowGradingModal(true);
     }
 
-    function displayTemplateModal() {
+    async function displayTemplateModal() {
         console.log("Showing Template modal");
+
+        if (dropdownTemplateNames.length === 0) {
+            console.log("Populating template dropdown with a database read.");
+            const querySnapshot = await getDocs(collection(firestore, "Grades", currentUser.email, "GradeTemplates"));
+            querySnapshot.forEach((doc) => {
+                setDropdownTemplateNames((dropdownTemplateNames) => [...dropdownTemplateNames, doc.data().templateName])
+            });
+        }
+
         setShowTemplateModal(true);
     }
 
@@ -280,7 +307,23 @@ const GradesRoom = ({ currentUser }) => {
 
     async function createNewTemplate(e) {
         e.preventDefault()
-        console.log(templateParameters);
+        console.log(newTemplateParameters);
+
+        // Create a database write of such a template (into a subCollection (templates will be shared among courses of a given teacher))
+        const collectionName = "Grades";
+        const IDofDocument = currentUser.email;
+        const subCollectionName = "GradeTemplates";
+        const courseGradesCollection = collection(firestore, collectionName, IDofDocument, subCollectionName);
+
+        const docRef = await addDoc(courseGradesCollection, {
+            templateName: newTemplateParameters[0],
+            gradeName: newTemplateParameters[1],
+            defaultMaxScore: newTemplateParameters[2],
+            defaultWeight: newTemplateParameters[3],
+            timestamp: serverTimestamp()
+        });
+
+        console.log("Created a doc in", collectionName, "in", subCollectionName, "with id:", docRef.id);
     }
 
     async function deleteGrade(gradeID, indexToRemove) {
@@ -301,33 +344,54 @@ const GradesRoom = ({ currentUser }) => {
 
     // One UseState variable, many inputs handled maybe better extra 3 line function than n(3 for a total of 4) more variables 
     function handleTemplateInputs(value, index) {
-        const updatedParameters = [...templateParameters];
+        const updatedParameters = [...newTemplateParameters];
         updatedParameters[index] = value;
-        setTemplateParameters(updatedParameters);
+        setNewTemplateParameters(updatedParameters);
+    }
+
+    async function applySelectedTemplate(selectedTemplateName) {
+        console.log(selectedTemplateName, "chosen.");
+        const collectionRef = collection(firestore, "Grades", currentUser.email, "GradeTemplates");
+
+        // Create a query against the collection.
+        const q = query(collectionRef, where("templateName", "==", selectedTemplateName));
+
+        // Query's result
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            setGradeName(doc.data().gradeName)
+            setGradeMaxPoints(doc.data().defaultMaxScore)
+            setGradeWeight(doc.data().defaultWeight)
+        });
     }
 
     return (
         <div className="GradesRoom">
             <h1>Grades Room of {isTeacher ? "teacher" : "student"}: {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</h1>
-            <p>All users can view their grades here. Teachers can grade their students.</p>
             <div className="horizontalFlex">
                 <div className="courses">
                     <h4>Choose a course.</h4>
                     <ListGroup>
                         {userCourses.map((element, index) => (
-                            <ListGroup.Item action onClick={() => displayParticipantsForCourse(element)} key={index}>{element}</ListGroup.Item>
+                            <ListGroup.Item action onClick={
+                                isTeacher ?
+                                    () => displayParticipantsForCourse(element) : // Only display different participants for a teacher
+                                    () => displayGradesForParticipant(currentUser.email) // Get straight to grades
+                            } key={index}>{element}</ListGroup.Item>
                         ))}
                     </ListGroup>
                 </div>
-                <div className="participants">
-                    <h4>Choose a participant.</h4>
-                    {participants.length === 0 && <p>Select a course</p>}
-                    <ListGroup>
-                        {participants.map((element, index) => (
-                            <ListGroup.Item action onClick={() => displayGradesForParticipant(element)} key={index}>{element}</ListGroup.Item>
-                        ))}
-                    </ListGroup>
-                </div>
+                {isTeacher &&
+                    <div className="participants">
+                        <h4>Choose a participant.</h4>
+                        {participants.length === 0 && <p>Select a course</p>}
+                        <ListGroup>
+                            {participants.map((element, index) => (
+                                <ListGroup.Item action onClick={() => displayGradesForParticipant(element)} key={index}>{element}</ListGroup.Item>
+                            ))}
+                        </ListGroup>
+                    </div>
+                }
             </div>
             <div className="grades">
                 <h4>View/create grades.</h4>
@@ -343,7 +407,7 @@ const GradesRoom = ({ currentUser }) => {
                                         <Col>Grade name</Col>
                                         <Col>Scored points</Col>
                                         <Col>Max points</Col>
-                                        <Col>Percentage</Col>
+                                        <Col>Score as %</Col>
                                         <Col>Grade in scale</Col>
                                         <Col>Weight</Col>
                                         {isTeacher && <Col></Col>}
@@ -354,9 +418,9 @@ const GradesRoom = ({ currentUser }) => {
                                             <Col>{element[0]}</Col>
                                             <Col>{element[1]}</Col>
                                             <Col>{element[2]}</Col>
-                                            {element[3] ? <Col>{element[3]}%</Col> : <Col>-</Col>}
+                                            <Col>{element[3]}%</Col>
                                             <Col>{element[4]}</Col>
-                                            <Col>{element[7]}</Col>
+                                            <Col>{element[7] / 100}</Col>
                                             {isTeacher && <Col><Button variant="secondary" onClick={() => deleteGrade(element[6], index)}>Delete</Button></Col>}
                                         </Row>
                                     ))}
@@ -386,6 +450,16 @@ const GradesRoom = ({ currentUser }) => {
 
                     <Modal.Body>
                         <Form.Group className="mb-3" >
+                            <DropdownButton
+                                variant="secondary"
+                                id="template-dropdown"
+                                title="Select Grade Template"
+                                className="mb-3">
+                                {dropdownTemplateNames.map((template, index) => (
+                                    <Dropdown.Item key={index} onClick={() => applySelectedTemplate(template)}>{template}</Dropdown.Item>
+                                ))}
+                            </DropdownButton>
+
                             <Form.Label>Name:</Form.Label>
                             <Form.Control
                                 className="mb-3"
@@ -447,7 +521,7 @@ const GradesRoom = ({ currentUser }) => {
                             <Form.Control
                                 className="mb-3"
                                 placeholder="Name"
-                                value={templateParameters[0]}
+                                value={newTemplateParameters[0]}
                                 onChange={e => handleTemplateInputs(e.target.value, 0)} />
 
                             <h5 className="templateModalH5">Default values for new grade</h5>
@@ -455,7 +529,7 @@ const GradesRoom = ({ currentUser }) => {
                             <Form.Control
                                 className="mb-3"
                                 placeholder="Name"
-                                value={templateParameters[1]}
+                                value={newTemplateParameters[1]}
                                 onChange={e => handleTemplateInputs(e.target.value, 1)} />
 
                             <Row className="mb-3">
@@ -464,8 +538,8 @@ const GradesRoom = ({ currentUser }) => {
                                     <Form.Control
                                         type="number"
                                         placeholder="Max points"
-                                        value={templateParameters[2]}
-                                        onChange={e =>  handleTemplateInputs(parseFloat(e.target.value), 2)} />
+                                        value={newTemplateParameters[2]}
+                                        onChange={e => handleTemplateInputs(parseFloat(e.target.value), 2)} />
                                 </Form.Group>
 
                                 <Form.Group as={Col}>
@@ -473,7 +547,7 @@ const GradesRoom = ({ currentUser }) => {
                                     <Form.Control
                                         type="number"
                                         placeholder="Weight"
-                                        value={templateParameters[3]}
+                                        value={newTemplateParameters[3]}
                                         onChange={e => handleTemplateInputs(parseFloat(e.target.value), 3)} />
                                 </Form.Group>
                             </Row>
