@@ -15,8 +15,6 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, or
 // for getting auth on reload
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-
-
 // (Get user state from different file as an argument (from App.js)
 // but we also need it on reload
 function ChatRoom({ currentUser }) {
@@ -33,8 +31,6 @@ function ChatRoom({ currentUser }) {
     const [recipientEmail, setRecipientEmail] = useState('')
     const [newContact, setNewContact] = useState('')
     const [newContactExist, setNewContactExist] = useState(true)
-
-
 
     // Fires once - on entrance to Chat room, initializes some values - user contacts in left panel and messages between user an chosen contact, also user on reload since we don't get currentUser form ChatRoom argument anymore. Also scroll down to the bottom of the messages div.
     useEffect(() => {
@@ -137,8 +133,9 @@ function ChatRoom({ currentUser }) {
 
                     console.log("length", radios.length);
                     //update radios
-                    setRadios((radios) => [...radios, { name: newContact, value: radios.length }])
-                    setRadioValue(radios.length)
+                    setRadios((radios) => [...radios, { name: newContact, value: radios.length }]);
+                    setRadioValue(radios.length);
+                    setRecipientEmail(newContact);
                 });
             } else {
                 setNewContactExist(false)
@@ -229,6 +226,7 @@ function ChatRoom({ currentUser }) {
         try {
             console.log("Creating a message document");
             const collectionName = "testMessages";
+            console.log("Document input data:", [inputtedMessage, currentUserEmail, recipientEmail, serverTimestamp()]);
             const document = {
                 messageText: inputtedMessage,
                 sender: currentUserEmail, // this might need to change
@@ -289,8 +287,6 @@ function ChatRoom({ currentUser }) {
         unsubscribe();
     }
 
-
-
     return (
         <div className='chatRoom'>
             <div id='leftPanel' className='panel'>
@@ -305,7 +301,7 @@ function ChatRoom({ currentUser }) {
                                 onChange={e => setNewContact(e.target.value)}
                             />
                         </Form.Group>
-                        <Button variant="primary" type="submit">
+                        <Button variant="secondary" type="submit">
                             Add
                         </Button>
                     </Form>
@@ -316,28 +312,31 @@ function ChatRoom({ currentUser }) {
 
                 <h4 id='currentRecipient'>You are chatting with:</h4>
 
-                <div id='contacts'>
-                    <ButtonGroup vertical='true'>
+                {radios.length === 0 ?
+                    <p>Nobody yet</p> :
+                    <div id='contacts'>
+                        <ButtonGroup vertical='true'>
 
-                        {/* If radios exist then map them to a set of radio buttons */}
-                        {radios.map((radio, idx) => (
-                            <ToggleButton className={radio.value}
-                                key={idx}
-                                id={`radio-${idx}`}
-                                type="radio"
-                                name="set1"
-                                // For now it will not work with === instead of ==
-                                // eslint-disable-next-line
-                                variant={radioValue == radio.value ? 'primary' : 'secondary'}
-                                value={radio.value}
-                                // eslint-disable-next-line
-                                checked={radioValue == radio.value}
-                                onChange={(e) => changedContact(e)}>
-                                {radio.name}
-                            </ToggleButton>
-                        ))}
-                    </ButtonGroup>
-                </div>
+                            {/* If radios exist then map them to a set of radio buttons */}
+                            {radios.map((radio, idx) => (
+                                <ToggleButton className={radio.value}
+                                    key={idx}
+                                    id={`radio-${idx}`}
+                                    type="radio"
+                                    name="set1"
+                                    // For now it will not work with === instead of ==
+                                    // eslint-disable-next-line
+                                    variant={radioValue == radio.value ? 'primary' : 'secondary'}
+                                    value={radio.value}
+                                    // eslint-disable-next-line
+                                    checked={radioValue == radio.value}
+                                    onChange={(e) => changedContact(e)}>
+                                    {radio.name}
+                                </ToggleButton>
+                            ))}
+                        </ButtonGroup>
+                    </div>
+                }
             </div>
             <div id='middlePanel' className='panel'>
                 <h1>ChatRoom {currentUserEmail ? "of " + currentUserEmail : null}</h1>

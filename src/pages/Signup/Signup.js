@@ -141,7 +141,8 @@ const Signup = () => {
 
                 {userCreated && <h3 className="greeting"> You have created an user </h3>}
             </Form>
-        </div>);
+        </div>
+    );
 
 };
 

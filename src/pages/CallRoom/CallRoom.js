@@ -335,13 +335,21 @@ const CallRoom = ({ currentUser }) => {
 
             <div id="videos">
                 <div>
-                    {localVideoVisible && <h4 className="center"> That's You</h4>}
+                    {localVideoVisible &&
+                        <>
+                            <h6>{currentUser.email}</h6>
+                            <Button className="overflow local" variant="outline-secondary" >+1</Button>
+                        </>
+                    }
                     <video id="localVideo" muted autoPlay playsInline></video>
                 </div>
+
                 <div>
-                    {remoteVideoVisible && <h4 className="center"> That's them</h4>}
-                <video id="remoteVideo" autoPlay playsInline></video>
+                    {/* {remoteVideoVisible && <h4 className="center"> That's them</h4>} */}
+                    {/* <Button className="overflow remote" variant="outline-secondary" >+1</Button> */}
+                    <video id="remoteVideo" autoPlay playsInline></video>
                 </div>
+
             </div>
 
             <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>
