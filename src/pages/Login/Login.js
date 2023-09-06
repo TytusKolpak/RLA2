@@ -3,7 +3,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
 import { useState } from 'react';
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 
 import "../Login/Login.css"
 
@@ -11,7 +11,7 @@ const Login = ({ currentUser }) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     const auth = getAuth();
 
@@ -40,7 +40,7 @@ const Login = ({ currentUser }) => {
                 // Signed in 
                 console.log("Success, You are signed in.");
                 console.log("user:", userCredential.user.email);
-                navigate('/chatRoom');
+                // navigate('/chatRoom');
             })
             .catch((error) => {
                 // Failed to signed in 

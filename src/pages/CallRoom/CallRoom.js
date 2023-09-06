@@ -21,7 +21,7 @@ const configuration = {
             ],
         },
     ],
-    iceCandidatePoolSize: 10,
+    iceCandidatePoolSize: 15,
 };
 
 const CallRoom = ({ currentUser }) => {
@@ -30,8 +30,8 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
-    const [localVideoVisible, setLocalVideoVisible] = useState(false)
-    const [remoteVideoVisible, setRemoteVideoVisible] = useState(false)
+    const [localVideoVisible, setLocalVideoVisible] = useState(false);
+    // const [remoteVideoVisible, setRemoteVideoVisible] = useState(false);
 
     useEffect(() => {
         return unsubscribe();
@@ -46,6 +46,8 @@ const CallRoom = ({ currentUser }) => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         document.querySelector('#localVideo').srcObject = stream;
         localStream = stream;
+
+        // Maybe this can be moved into the part where a callee responds
         remoteStream = new MediaStream();
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
@@ -203,8 +205,9 @@ const CallRoom = ({ currentUser }) => {
 
             peerConnection.addEventListener('track', event => {
                 console.log("We get a remote connection");
-                setRemoteVideoVisible(true);
+                // setRemoteVideoVisible(true);
                 console.log('Got remote track:', event.streams[0]);
+
                 event.streams[0].getTracks().forEach(track => {
                     console.log('Add a track to the remoteStream:', track);
                     remoteStream.addTrack(track);
@@ -245,7 +248,7 @@ const CallRoom = ({ currentUser }) => {
 
     async function hangUp(e) {
         console.log("Hanging up");
-        setRemoteVideoVisible(false);
+        // setRemoteVideoVisible(false);
         setLocalVideoVisible(false);
 
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
