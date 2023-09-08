@@ -30,14 +30,15 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
-    const [localVideoVisible, setLocalVideoVisible] = useState(false);
-    // const [remoteVideoVisible, setRemoteVideoVisible] = useState(false);
+    // const [localVideoVisible, setLocalVideoVisible] = useState(false);
+    const [plus1Visible, setPlus1Visible] = useState(false);
+
+    const [isTeacher, setIsTeacher] = useState(false);
 
     useEffect(() => {
         return unsubscribe();
     }, [])
 
-    // Checked, OK
     async function openUserMedia(e) {
         console.log("Opening user media");
         setCreateRoomBtnDisabled([true, false, false, false]);
@@ -52,10 +53,9 @@ const CallRoom = ({ currentUser }) => {
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
-        setLocalVideoVisible(true);
+        // setLocalVideoVisible(true);
     }
 
-    // Checking order of operations
     async function createRoom() {
         console.log("Creating a room");
         const collectionName = "rooms";
@@ -65,6 +65,7 @@ const CallRoom = ({ currentUser }) => {
         console.log('Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
 
+        // My function
         registerPeerConnectionListeners();
 
         // That's for registering audio and video
@@ -85,13 +86,36 @@ const CallRoom = ({ currentUser }) => {
                 console.log('Got final candidate!');
                 return;
             }
-            // console.log('Got candidate: ', event.candidate);
             console.log('Got candidate');
 
             // Add a document to this (sub)collection 
             await addDoc(callerCandidatesCollection, event.candidate.toJSON());
         });
         // CODE FOR COLLECTING ICE CANDIDATES ABOVE
+
+        // READING CALLER DATA v// create a subCollection reference 
+        const docRef = doc(firestore, "Grades", currentUser.email);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            if (docSnap.data().isTeacher) {
+                console.log("User is a teacher");
+                setIsTeacher(true);
+            }
+        } else {
+            console.log("No document for specified user exist! Email:", currentUser.email);
+        }
+        // READING CALLER DATA ^
+
+        // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION v
+        const infoDoc = {
+            caller: {
+                email: currentUser.email,
+                isTeacher: isTeacher
+            }
+        };
+        await updateDoc(roomRef, infoDoc);
+        // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION ^
 
         // CREATE A ROOM BELOW
         const offer = await peerConnection.createOffer();
@@ -205,7 +229,6 @@ const CallRoom = ({ currentUser }) => {
 
             peerConnection.addEventListener('track', event => {
                 console.log("We get a remote connection");
-                // setRemoteVideoVisible(true);
                 console.log('Got remote track:', event.streams[0]);
 
                 event.streams[0].getTracks().forEach(track => {
@@ -248,8 +271,8 @@ const CallRoom = ({ currentUser }) => {
 
     async function hangUp(e) {
         console.log("Hanging up");
-        // setRemoteVideoVisible(false);
-        setLocalVideoVisible(false);
+        // setLocalVideoVisible(false);
+        setIsTeacher(false);
 
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
@@ -319,13 +342,14 @@ const CallRoom = ({ currentUser }) => {
     return (
         <div className="CallRoom">
 
+            <Button onClick={() => setPlus1Visible(!plus1Visible)}>{plus1Visible ? "true" : "false"}</Button>
             <h1>CallRoom of {currentUser.email}</h1>
 
             <div className="mainButtons">
                 {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 0 ? "primary" : "secondary"} onClick={openUserMedia} disabled={mainButtonsState[0]} >Open camera & microphone</Button>
                 {/* eslint-disable-next-line */}
-                <Button variant={primaryMainButton == 1 ? "primary" : "secondary"} onClick={createRoom} disabled={mainButtonsState[1]}>Create room</Button>
+                <Button variant={primaryMainButton == 1 ? "primary" : "secondary"} onClick={createRoom} disabled={mainButtonsState[1] && !localStream}>Create room</Button>
                 {/* eslint-disable-next-line */}
                 <Button variant={primaryMainButton == 2 ? "primary" : "secondary"} onClick={joinRoom} disabled={mainButtonsState[2]} >Join room</Button>
                 {/* eslint-disable-next-line */}
@@ -338,18 +362,13 @@ const CallRoom = ({ currentUser }) => {
 
             <div id="videos">
                 <div>
-                    {localVideoVisible &&
-                        <>
-                            <h6>{currentUser.email}</h6>
-                            <Button className="overflow local" variant="outline-secondary" >+1</Button>
-                        </>
-                    }
                     <video id="localVideo" muted autoPlay playsInline></video>
                 </div>
 
                 <div>
-                    {/* {remoteVideoVisible && <h4 className="center"> That's them</h4>} */}
-                    {/* <Button className="overflow remote" variant="outline-secondary" >+1</Button> */}
+                    {(isTeacher && plus1Visible) &&
+                        <Button className="overflow local" variant="outline-secondary" >+1</Button>
+                    }
                     <video id="remoteVideo" autoPlay playsInline></video>
                 </div>
 
