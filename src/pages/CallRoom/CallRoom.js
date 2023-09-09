@@ -342,7 +342,6 @@ const CallRoom = ({ currentUser }) => {
     return (
         <div className="CallRoom">
 
-            <Button onClick={() => setPlus1Visible(!plus1Visible)}>{plus1Visible ? "true" : "false"}</Button>
             <h1>CallRoom of {currentUser.email}</h1>
 
             <div className="mainButtons">
