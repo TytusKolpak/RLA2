@@ -246,7 +246,7 @@ function FilesRoom({ currentUser }) {
                             variant='secondary'
                             className='mb-3'
                             title={selectedFolder}
-                            onSelect={() => { handleFolderSelect() }}>
+                            onSelect={handleFolderSelect}>
                             {accessGroups.map((element, index) => (
                                 <Dropdown.Item eventKey={element} key={index}>{element}</Dropdown.Item>
                             ))}
