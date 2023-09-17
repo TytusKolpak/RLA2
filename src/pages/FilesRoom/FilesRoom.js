@@ -66,7 +66,7 @@ function FilesRoom({ currentUser }) {
         if (docSnap.exists()) {
             // console.log("Document data:", docSnap.data());
             accessGroupsX = docSnap.data().accessGroups;
-            setAccessGroups(accessGroups);
+            setAccessGroups(accessGroupsX);
 
             // If user doesn't have empty access groups array
             if (accessGroupsX.length !== 0) {
@@ -246,7 +246,7 @@ function FilesRoom({ currentUser }) {
                             variant='secondary'
                             className='mb-3'
                             title={selectedFolder}
-                            onSelect={handleFolderSelect}>
+                            onSelect={() => { handleFolderSelect() }}>
                             {accessGroups.map((element, index) => (
                                 <Dropdown.Item eventKey={element} key={index}>{element}</Dropdown.Item>
                             ))}

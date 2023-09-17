@@ -19,7 +19,6 @@
 }
 
 .uploading {
-    max-width: 20vw;
     max-height: 80vh;
 
     .warning {
