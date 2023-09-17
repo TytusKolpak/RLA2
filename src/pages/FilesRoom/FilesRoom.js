@@ -51,9 +51,9 @@ function FilesRoom({ currentUser }) {
     }, [])
 
     async function displayItems() {
+        console.log("Displaying items");        
         // Access determination part
         console.log("Finding user-available folders");
-        console.log("currentUserEmail", currentUserEmail);
 
         // Retrieving the document with access-list of current user from the database
         const collectionName = "StorageAccess";
@@ -135,6 +135,7 @@ function FilesRoom({ currentUser }) {
                 console.error('Error uploading file:', error);
             });
 
+        console.log("Upload handled.");
         displayItems();
     };
 
