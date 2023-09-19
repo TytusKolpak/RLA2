@@ -3,6 +3,8 @@ import { firestore } from '../../firebase_setup/firebase';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Popover from 'react-bootstrap/Popover';
 
 import { useEffect, useState } from "react";
 
@@ -12,6 +14,8 @@ let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
 var unsubscribe = function () { }; // initializing a function to make it global
+var userCallRole = null;
+var roomIdX = null;
 const configuration = {
     iceServers: [
         {
@@ -30,18 +34,38 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
-    // const [localVideoVisible, setLocalVideoVisible] = useState(false);
-    const [plus1Visible, setPlus1Visible] = useState(false);
-
-    const [isTeacher, setIsTeacher] = useState(false);
+    const [showPlus, setShowPlus] = useState('');
+    const [isTeacher, setIsTeacher] = useState(null);
+    const [remoteEmail, setRemoteEmail] = useState('');
+    const [annotation, setAnnotation] = useState('');
 
     useEffect(() => {
         return unsubscribe();
+        // eslint-disable-next-line
     }, [])
 
-    async function openUserMedia(e) {
+    useEffect(() => {
+        async function readTeacher() {
+            // READING CALLER DATA v// create a subCollection reference 
+            const docRef = doc(firestore, "Grades", currentUser.email);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                if (docSnap.data().isTeacher) {
+                    console.log("User is a teacher");
+                    setIsTeacher(true);
+                }
+            } else {
+                console.log("No document for specified user exist! Email:", currentUser.email);
+            }
+            // READING CALLER DATA ^
+        }
+
+        readTeacher();
+    }, [currentUser.email])
+
+    async function openUserMedia() {
         console.log("Opening user media");
-        setCreateRoomBtnDisabled([true, false, false, false]);
         setPrimaryMainButton(1);
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -53,7 +77,7 @@ const CallRoom = ({ currentUser }) => {
         document.querySelector('#remoteVideo').srcObject = remoteStream;
 
         console.log('Stream:', document.querySelector('#localVideo').srcObject);
-        // setLocalVideoVisible(true);
+        setCreateRoomBtnDisabled([true, false, false, false]);
     }
 
     async function createRoom() {
@@ -61,6 +85,7 @@ const CallRoom = ({ currentUser }) => {
         const collectionName = "rooms";
         const roomRef = await addDoc(collection(firestore, collectionName), {});
         const roomId = roomRef.id;
+        roomIdX = roomRef.id;
 
         console.log('Create PeerConnection with configuration: ', configuration);
         peerConnection = new RTCPeerConnection(configuration);
@@ -93,20 +118,6 @@ const CallRoom = ({ currentUser }) => {
         });
         // CODE FOR COLLECTING ICE CANDIDATES ABOVE
 
-        // READING CALLER DATA v// create a subCollection reference 
-        const docRef = doc(firestore, "Grades", currentUser.email);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            if (docSnap.data().isTeacher) {
-                console.log("User is a teacher");
-                setIsTeacher(true);
-            }
-        } else {
-            console.log("No document for specified user exist! Email:", currentUser.email);
-        }
-        // READING CALLER DATA ^
-
         // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION v
         const infoDoc = {
             caller: {
@@ -134,6 +145,7 @@ const CallRoom = ({ currentUser }) => {
         // add a new room document to this database, to this collection, with this content
         setRoomId(roomRef.id); // for global accessibility right after room creation (in hang up doc deletion)
         setCurrentRoomText(`Current room is ${roomId} - You are the caller!`);
+        userCallRole = "caller";
         //CREATE A ROOM ABOVE
 
         // Will be triggered each time a new track becomes available
@@ -170,7 +182,8 @@ const CallRoom = ({ currentUser }) => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
                     let data = change.doc.data();
-                    console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                    // console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                    console.log(`Got new remote ICE candidate:`);
                     await peerConnection.addIceCandidate(new RTCIceCandidate(data));
                 }
             });
@@ -187,6 +200,7 @@ const CallRoom = ({ currentUser }) => {
     async function confirmJoin() {
         console.log('Join room:', roomId);
         setCurrentRoomText(`Current room is ${roomId} - You are the callee!`);
+        userCallRole = "callee";
         await joinRoomById(roomId);
         setShowModal(false)
     }
@@ -200,79 +214,96 @@ const CallRoom = ({ currentUser }) => {
         const roomSnapshot = await getDoc(roomRef);
         console.log('Got room:', roomSnapshot.exists);
 
-        if (roomSnapshot.exists) {
-            console.log('Create PeerConnection with configuration: ', configuration);
-            peerConnection = new RTCPeerConnection(configuration);
-            registerPeerConnectionListeners();
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-
-            // CODE FOR COLLECTING ICE CANDIDATES BELOW
-            const subCollection2Name = "calleeCandidates";
-            const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
-
-            peerConnection.addEventListener('icecandidate', event => {
-                if (!event.candidate) {
-                    console.log('Got final candidate!');
-                    return;
-                }
-                console.log('Got candidate: ', event.candidate);
-
-                // add a new candidate document to the ICECandidates subcollection
-                async function addCallee() {
-                    await addDoc(calleeCandidatesCollection, event.candidate.toJSON());
-                }
-                addCallee();
-            });
-            // CODE FOR COLLECTING ICE CANDIDATES ABOVE
-
-            peerConnection.addEventListener('track', event => {
-                console.log("We get a remote connection");
-                console.log('Got remote track:', event.streams[0]);
-
-                event.streams[0].getTracks().forEach(track => {
-                    console.log('Add a track to the remoteStream:', track);
-                    remoteStream.addTrack(track);
-                });
-            });
-
-            // CODE FOR CREATING SDP ANSWER BELOW
-            console.log("roomSnapshot.data().offer", roomSnapshot.data().offer);
-            const offer = roomSnapshot.data().offer;
-            await peerConnection.setRemoteDescription(offer);
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-
-            const roomWithAnswer = {
-                answer: {
-                    type: answer.type,
-                    sdp: answer.sdp
-                }
-            }
-            await updateDoc(roomRef, roomWithAnswer)
-            // CODE FOR CREATING SDP ANSWER ABOVE
-
-            // LISTENING FOR REMOTE ICE CANDIDATES BELOW
-            const subCollectionName = "callerCandidates";
-            const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
-            onSnapshot(callerCandidatesCollection, async snapshot => {
-                snapshot.docChanges().forEach(async change => {
-                    if (change.type === 'added') {
-                        let data = change.doc.data();
-                        console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data));
-                    }
-                });
-            });
-            // LISTENING FOR REMOTE ICE CANDIDATES ABOVE
+        if (!roomSnapshot.exists) {
+            console.log("Specified room doesn't exist. Check if there is unnecessary space bar at the end of the id.");
+            return;
         }
+
+        // below is the code to be executed if the room does exist
+
+        // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION v
+        const infoDoc = {
+            callee: {
+                email: currentUser.email,
+            }
+        };
+        await updateDoc(roomRef, infoDoc);
+        // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION ^
+
+
+        console.log('Create PeerConnection with configuration: ', configuration);
+        peerConnection = new RTCPeerConnection(configuration);
+        registerPeerConnectionListeners();
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // CODE FOR COLLECTING ICE CANDIDATES BELOW
+        const subCollection2Name = "calleeCandidates";
+        const calleeCandidatesCollection = collection(firestore, collectionName, roomId, subCollection2Name);
+
+        peerConnection.addEventListener('icecandidate', event => {
+            if (!event.candidate) {
+                console.log('Got final candidate!');
+                return;
+            }
+            console.log('Got candidate: ', event.candidate);
+
+            // add a new candidate document to the ICECandidates subcollection
+            async function addCallee() {
+                await addDoc(calleeCandidatesCollection, event.candidate.toJSON());
+            }
+            addCallee();
+        });
+        // CODE FOR COLLECTING ICE CANDIDATES ABOVE
+
+        peerConnection.addEventListener('track', event => {
+            console.log("We get a remote connection");
+            console.log('Got remote track:', event.streams[0]);
+
+            event.streams[0].getTracks().forEach(track => {
+                console.log('Add a track to the remoteStream:', track);
+                remoteStream.addTrack(track);
+            });
+        });
+
+        // CODE FOR CREATING SDP ANSWER BELOW
+        console.log("roomSnapshot.data().offer", roomSnapshot.data().offer);
+        const offer = roomSnapshot.data().offer;
+        await peerConnection.setRemoteDescription(offer);
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        const roomWithAnswer = {
+            answer: {
+                type: answer.type,
+                sdp: answer.sdp
+            }
+        }
+        await updateDoc(roomRef, roomWithAnswer)
+        // CODE FOR CREATING SDP ANSWER ABOVE
+
+        // LISTENING FOR REMOTE ICE CANDIDATES BELOW
+        const subCollectionName = "callerCandidates";
+        const callerCandidatesCollection = collection(firestore, collectionName, roomId, subCollectionName);
+        onSnapshot(callerCandidatesCollection, async snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type === 'added') {
+                    let data = change.doc.data();
+                    // console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                    console.log(`Got new remote ICE candidate:`);
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                }
+            });
+        });
+        // LISTENING FOR REMOTE ICE CANDIDATES ABOVE
+
     }
 
-    async function hangUp(e) {
+    async function hangUp() {
         console.log("Hanging up");
-        // setLocalVideoVisible(false);
-        setIsTeacher(false);
+        setShowPlus(false);
+        setRemoteEmail("");
 
         const tracks = document.querySelector('#localVideo').srcObject.getTracks();
         tracks.forEach(track => {
@@ -326,8 +357,39 @@ const CallRoom = ({ currentUser }) => {
             console.log(`ICE gathering state changed: ${peerConnection.iceGatheringState}`);
         });
 
-        peerConnection.addEventListener('connectionstatechange', () => {
+        peerConnection.addEventListener('connectionstatechange', async () => {
             console.log(`Connection state change: ${peerConnection.connectionState}`);
+
+            // End of the whole process
+            if (peerConnection.connectionState === "connected") {
+                setShowPlus(true);
+
+                var roomIdToAppend
+                if (userCallRole === "caller")
+                    roomIdToAppend = roomIdX;
+
+                if (userCallRole === "callee")
+                    roomIdToAppend = roomId
+
+                console.log("room id to append:", roomIdToAppend);
+                const docRef = doc(firestore, "rooms", roomIdToAppend);
+                const docSnap = await getDoc(docRef);
+
+                var remoteEmail;
+                if (docSnap.exists()) {
+                    if (userCallRole === "caller")
+                        remoteEmail = docSnap.data().callee.email;
+
+                    if (userCallRole === "callee")
+                        remoteEmail = docSnap.data().caller.email;
+
+                    console.log("remoteEmail:", remoteEmail);
+                    setRemoteEmail(remoteEmail.substring(0, currentUser.email.indexOf('@')));
+                } else {
+                    // docSnap.data() will be undefined in this case
+                    console.log("No such document!");
+                }
+            }
         });
 
         peerConnection.addEventListener('signalingstatechange', () => {
@@ -342,7 +404,7 @@ const CallRoom = ({ currentUser }) => {
     return (
         <div className="CallRoom">
 
-            <h1>CallRoom of {currentUser.email}</h1>
+            <h1>CallRoom of: {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</h1>
 
             <div className="mainButtons">
                 {/* eslint-disable-next-line */}
@@ -365,10 +427,35 @@ const CallRoom = ({ currentUser }) => {
                 </div>
 
                 <div>
-                    {(isTeacher && plus1Visible) &&
-                        <Button className="overflow local" variant="outline-secondary" >+1</Button>
-                    }
+                    {remoteEmail === "" ? null :
+                        <div className="overflowTopCenter">
+                            <OverlayTrigger trigger="click" placement="right" overlay=
+                                {
+                                    <Popover id="popover-basic">
+                                        <Popover.Header as="h3">User's annotation</Popover.Header>
+                                        <Popover.Body>
+                                            <Form>
+                                                <Form.Group controlId="exampleForm.ControlTextarea1">
+                                                    <Form.Control
+                                                        style={{ resize: 'both', maxWidth: '270px', minWidth: '160px', maxHeight: '200px' }}
+                                                        as="textarea"
+                                                        rows={3}
+                                                        placeholder="Create an annotation"
+                                                        value={annotation}
+                                                        onChange={e => setAnnotation(e.target.value)} />
+                                                </Form.Group>
+                                            </Form>
+                                        </Popover.Body>
+                                    </Popover>
+                                }>
+                                <Button variant="outline-dark">{remoteEmail}</Button>
+                            </OverlayTrigger>
+                        </div>}
+                    {(showPlus & isTeacher) ? <Button className="overflow local" variant="outline-secondary" >+1</Button> : null}
                     <video id="remoteVideo" autoPlay playsInline></video>
+
+
+
                 </div>
 
             </div>

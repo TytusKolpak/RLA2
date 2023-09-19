@@ -5,10 +5,23 @@
     align-items: center;
     justify-content: center;
 
-    .overflow{
+    .overflow {
         position: absolute;
         font-weight: bolder;
         z-index: 1;
+    }
+
+    .overflowTopCenter {
+        height: 0;
+        text-align: center;
+        position: relative;
+        font-weight: bolder;
+        z-index: 1;
+        color: black;
+    }
+
+    .btn-outline-dark{
+        border: 0px;
     }
 
     .btn {
