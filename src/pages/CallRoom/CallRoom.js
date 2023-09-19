@@ -5,10 +5,11 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Popover from 'react-bootstrap/Popover';
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
 
 import { useEffect, useState } from "react";
 
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
 
 let peerConnection = null;
 let localStream = null;
@@ -34,10 +35,13 @@ const CallRoom = ({ currentUser }) => {
     const [primaryMainButton, setPrimaryMainButton] = useState(0)
     const [roomId, setRoomId] = useState('');
     const [currentRoomText, setCurrentRoomText] = useState('');
-    const [showPlus, setShowPlus] = useState('');
+    const [showPlus, setShowPlus] = useState(false);
     const [isTeacher, setIsTeacher] = useState(null);
     const [remoteEmail, setRemoteEmail] = useState('');
     const [annotation, setAnnotation] = useState('');
+    const [selectedCourse, setSelectedCourse] = useState('');
+    const [showCourseSelectionModal, setShowCourseSelectionModal] = useState(false);
+    const [userCourses, setUserCourses] = useState([]);
 
     useEffect(() => {
         return unsubscribe();
@@ -126,6 +130,31 @@ const CallRoom = ({ currentUser }) => {
             }
         };
         await updateDoc(roomRef, infoDoc);
+
+        // Add a selected course to the call
+        if (isTeacher) {
+            // Find the courses of current teacher
+            console.log("Select course to assign to this call");
+
+            console.log("Displaying user courses. (for", currentUser.email, ")");
+            const collectionName = "Courses";
+            const coursesRef = collection(firestore, collectionName);
+
+            // Create a query against the collection.
+            const q = query(coursesRef, where("participants", "array-contains", currentUser.email));
+
+            // Query's result
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                // doc.data() is never undefined for query doc snapshots
+                console.log(doc.id, ":", doc.data());
+                setUserCourses((userCourses) => [...userCourses, doc.id])
+            });
+
+            console.log("userCourses:", userCourses);
+
+            setShowCourseSelectionModal(true);
+        }
         // CODE FOR INPUTTING CALLER DATA INTO THE COLLECTION ^
 
         // CREATE A ROOM BELOW
@@ -384,7 +413,7 @@ const CallRoom = ({ currentUser }) => {
                         remoteEmail = docSnap.data().caller.email;
 
                     console.log("remoteEmail:", remoteEmail);
-                    setRemoteEmail(remoteEmail.substring(0, currentUser.email.indexOf('@')));
+                    setRemoteEmail(remoteEmail);
                 } else {
                     // docSnap.data() will be undefined in this case
                     console.log("No such document!");
@@ -401,10 +430,37 @@ const CallRoom = ({ currentUser }) => {
         });
     }
 
+    async function giveAPlus() {
+        const gradeName = "Activity";
+        const gradeScoredPoints = 1;
+        const gradeMaxPoints = 0;
+        const gradeWeight = 100;
+        console.log("Creating a new grade. Grade info:", gradeName, gradeScoredPoints, gradeMaxPoints, gradeWeight);
+
+        const collectionName = "Grades";
+        const IDofDocument = remoteEmail;
+        const subCollectionName = selectedCourse;
+        const courseGradesCollection = collection(firestore, collectionName, IDofDocument, subCollectionName);
+
+        const docRef = await addDoc(courseGradesCollection, {
+            name: gradeName,
+            scoredPoints: gradeScoredPoints,
+            maxPoints: gradeMaxPoints,
+            percentageScore: "-",
+            gradeInScale: "-",
+            gradeInScaleName: "-",
+            timestamp: serverTimestamp(),
+            gradeWeight: gradeWeight
+        });
+
+        console.log("Document written with ID: ", docRef.id);
+        setShowPlus(false);
+    }
+
     return (
         <div className="CallRoom">
 
-            <h1>CallRoom of: {currentUser.email.substring(0, currentUser.email.indexOf('@'))}</h1>
+            <h1>CallRoom of: {currentUser.email.substring(0, currentUser.email.indexOf('@'))} {selectedCourse && "in"} {selectedCourse}</h1>
 
             <div className="mainButtons">
                 {/* eslint-disable-next-line */}
@@ -430,34 +486,28 @@ const CallRoom = ({ currentUser }) => {
                     {remoteEmail === "" ? null :
                         <div className="overflowTopCenter">
                             <OverlayTrigger trigger="click" placement="right" overlay=
-                                {
-                                    <Popover id="popover-basic">
-                                        <Popover.Header as="h3">User's annotation</Popover.Header>
-                                        <Popover.Body>
-                                            <Form>
-                                                <Form.Group controlId="exampleForm.ControlTextarea1">
-                                                    <Form.Control
-                                                        style={{ resize: 'both', maxWidth: '270px', minWidth: '160px', maxHeight: '200px' }}
-                                                        as="textarea"
-                                                        rows={3}
-                                                        placeholder="Create an annotation"
-                                                        value={annotation}
-                                                        onChange={e => setAnnotation(e.target.value)} />
-                                                </Form.Group>
-                                            </Form>
-                                        </Popover.Body>
-                                    </Popover>
-                                }>
-                                <Button variant="outline-dark">{remoteEmail}</Button>
+                                {<Popover id="popover-basic">
+                                    <Popover.Header as="h3">User's annotation</Popover.Header>
+                                    <Popover.Body>
+                                        <Form>
+                                            <Form.Group controlId="exampleForm.ControlTextarea1">
+                                                <Form.Control
+                                                    style={{ resize: 'both', maxWidth: '270px', minWidth: '160px', maxHeight: '200px' }}
+                                                    as="textarea"
+                                                    rows={3}
+                                                    placeholder="Create an annotation"
+                                                    value={annotation}
+                                                    onChange={e => setAnnotation(e.target.value)} />
+                                            </Form.Group>
+                                        </Form>
+                                    </Popover.Body>
+                                </Popover>}>
+                                <Button variant="outline-dark">{remoteEmail.substring(0, currentUser.email.indexOf('@'))}</Button>
                             </OverlayTrigger>
                         </div>}
-                    {(showPlus & isTeacher) ? <Button className="overflow local" variant="outline-secondary" >+1</Button> : null}
+                    {(showPlus & isTeacher) ? <Button className="overflow local" variant="outline-secondary" onClick={() => giveAPlus()}>+1</Button> : null}
                     <video id="remoteVideo" autoPlay playsInline></video>
-
-
-
                 </div>
-
             </div>
 
             <Modal show={showModal} onHide={() => setShowModal(false)} backdrop="static" centered>
@@ -480,6 +530,24 @@ const CallRoom = ({ currentUser }) => {
                 <Modal.Footer>
                     <Button variant="primary" onClick={confirmJoin}>Join</Button>
                     <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showCourseSelectionModal} onHide={() => setShowCourseSelectionModal(false)} backdrop="static" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Select course for this room</Modal.Title>
+                </Modal.Header>
+
+                <Modal.Body id="CourseSelection" >
+                    <ButtonGroup className="mb-2" vertical>
+                        {userCourses.map((courseName, index) => (
+                            <Button key={index} onClick={() => { setSelectedCourse(courseName); setShowCourseSelectionModal(false) }}>{courseName}</Button>
+                        ))}
+                    </ButtonGroup>
+                </Modal.Body>
+
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => { setShowCourseSelectionModal(false); hangUp() }}>Cancel</Button>
                 </Modal.Footer>
             </Modal>
         </div >

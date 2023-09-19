@@ -20,7 +20,7 @@
         color: black;
     }
 
-    .btn-outline-dark{
+    .btn-outline-dark {
         border: 0px;
     }
 
@@ -56,4 +56,11 @@
 
 video {
     width: 320px;
+}
+
+#CourseSelection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
