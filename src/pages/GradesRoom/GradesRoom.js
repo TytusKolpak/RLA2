@@ -201,14 +201,9 @@ const GradesRoom = ({ currentUser }) => {
         });
     }
 
-    function displayGradingModal() {
+    async function displayGradingModal() {
         console.log("Showing grading modal.");
-        setShowGradingModal(true);
-    }
-
-    async function displayTemplateModal() {
-        console.log("Showing Template modal");
-
+    
         if (dropdownTemplateNames.length === 0) {
             console.log("Populating template dropdown with a database read.");
             const querySnapshot = await getDocs(collection(firestore, "Grades", currentUser.email, "GradeTemplates"));
@@ -217,6 +212,11 @@ const GradesRoom = ({ currentUser }) => {
             });
         }
 
+        setShowGradingModal(true);
+    }
+
+    async function displayTemplateModal() {
+        console.log("Showing Template modal");
         setShowTemplateModal(true);
     }
 
