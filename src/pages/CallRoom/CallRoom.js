@@ -339,13 +339,11 @@ const CallRoom = ({ currentUser }) => {
             track.stop();
         });
 
-        if (remoteStream) {
+        if (remoteStream) 
             remoteStream.getTracks().forEach(track => track.stop());
-        }
-
-        if (peerConnection) {
+        
+        if (peerConnection) 
             peerConnection.close();
-        }
 
         document.querySelector('#localVideo').srcObject = null;
         document.querySelector('#remoteVideo').srcObject = null;
@@ -353,6 +351,8 @@ const CallRoom = ({ currentUser }) => {
         setPrimaryMainButton(0);
         setCreateRoomBtnDisabled([false, true, true, true]);
         setCurrentRoomText('');
+        setUserCourses([])
+        localStream = null;
 
         // Delete room on hangup
         if (roomId) {
@@ -492,7 +492,7 @@ const CallRoom = ({ currentUser }) => {
                                         <Form>
                                             <Form.Group controlId="exampleForm.ControlTextarea1">
                                                 <Form.Control
-                                                    style={{ resize: 'both', maxWidth: '270px', minWidth: '160px', maxHeight: '200px' }}
+                                                    style={{ resize: 'both', maxWidth: '240px', minWidth: '160px', maxHeight: '200px' }}
                                                     as="textarea"
                                                     rows={3}
                                                     placeholder="Create an annotation"
